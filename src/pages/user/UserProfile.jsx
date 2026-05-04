@@ -1,4 +1,4 @@
-// src/pages/user/UserProfile.jsx - COMPLETE CLOUDINARY VERSION
+// src/pages/user/UserProfile.jsx - FULL COMPLETE FIXED VERSION
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -160,65 +160,94 @@ const UserProfile = () => {
     }
   };
 
+  // ============================================================
+  // FIXED: AVATAR UPLOAD - Using backend endpoint (reliable)
+  // ============================================================
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
+    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {
       toast.error('Only JPEG, PNG, WebP, and GIF images are allowed');
       return;
     }
     
+    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('File too large. Max 5MB');
       return;
     }
     
     setUploadingAvatar(true);
-    const toastId = toast.loading('Uploading profile picture to Cloudinary...');
+    const toastId = toast.loading('Uploading profile picture...');
     
     try {
-      // Upload directly to Cloudinary
-      const result = await cloudinaryService.uploadAvatarDirect(file, user?.id);
+      // Create FormData for backend upload
+      const formData = new FormData();
+      formData.append('file', file);
       
-      if (result.success) {
-        // Send the Cloudinary URL to backend to save in database
-        const updateResult = await usersService.updateProfile({ avatar_url: result.url });
-        setProfile(prev => ({ ...prev, avatar_url: result.url }));
-        updateUser({ avatar_url: result.url });
-        toast.success('Profile picture updated!', { id: toastId });
-      } else {
-        throw new Error(result.error);
+      // Use the backend endpoint (same as product upload which works perfectly)
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('http://localhost:8080/users/me/avatar', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Upload failed');
       }
+      
+      const result = await response.json();
+      
+      // Update profile with new avatar URL
+      setProfile(prev => ({ ...prev, avatar_url: result.avatar_url }));
+      updateUser({ avatar_url: result.avatar_url });
+      
+      toast.success('Profile picture updated!', { id: toastId });
+      
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.response?.data?.detail || error.message || 'Failed to upload avatar', { id: toastId });
+      toast.error(error.message || 'Failed to upload avatar', { id: toastId });
     } finally {
       setUploadingAvatar(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
   };
 
+  // Helper function to get media URL (for non-Cloudinary images)
   const getMediaUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
     return `http://localhost:8080${path}`;
   };
 
+  // Get optimized image URL for Cloudinary images
   const getOptimizedImageUrl = (url) => {
     if (!url) return null;
-    return cloudinaryService.getProductThumbnail(url);
+    // Only optimize if it's a Cloudinary URL
+    if (url.includes('cloudinary')) {
+      return cloudinaryService.getProductThumbnail(url);
+    }
+    return getMediaUrl(url);
   };
 
+  // Get avatar URL with optimization (only for Cloudinary URLs)
   const getAvatarUrl = () => {
-    if (profile?.avatar_url) {
-      return cloudinaryService.getAvatarUrl(profile.avatar_url, 128);
+    const avatarUrl = profile?.avatar_url || user?.avatar_url;
+    if (!avatarUrl) return null;
+    
+    // If it's a Cloudinary URL, optimize it
+    if (avatarUrl.includes('cloudinary')) {
+      return cloudinaryService.getAvatarUrl(avatarUrl, 128);
     }
-    if (user?.avatar_url) {
-      return cloudinaryService.getAvatarUrl(user.avatar_url, 128);
-    }
-    return null;
+    // Otherwise return as-is (might be local URL)
+    return getMediaUrl(avatarUrl);
   };
 
   const totalLikes = products.reduce((sum, product) => sum + (product.likes_count || 0), 0);
