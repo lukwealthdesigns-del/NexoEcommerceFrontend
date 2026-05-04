@@ -6,6 +6,7 @@ export default defineConfig({
     jsxRuntime: 'automatic',
     jsxImportSource: 'react',
   })],
+  base: '/',  // Add this line - ensures correct asset paths in production
   server: {
     port: 3000,
     host: true,
@@ -24,5 +25,12 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
   },
 })
