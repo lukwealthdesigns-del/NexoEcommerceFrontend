@@ -1,4 +1,4 @@
-// src/pages/user/UserProfile.jsx - FULL COMPLETE FIXED VERSION
+// src/pages/user/UserProfile.jsx - WORKING AVATAR UPLOAD
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -161,7 +161,7 @@ const UserProfile = () => {
   };
 
   // ============================================================
-  // FIXED: AVATAR UPLOAD - Using backend endpoint (reliable)
+  // FIXED: AVATAR UPLOAD - Using usersService (works with your backend)
   // ============================================================
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
@@ -184,26 +184,9 @@ const UserProfile = () => {
     const toastId = toast.loading('Uploading profile picture...');
     
     try {
-      // Create FormData for backend upload
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // Use the backend endpoint (same as product upload which works perfectly)
-      const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8080/users/me/avatar', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Upload failed');
-      }
-      
-      const result = await response.json();
+      // Use the usersService.uploadAvatar method (already configured)
+      const result = await usersService.uploadAvatar(file);
+      console.log('Upload result:', result);
       
       // Update profile with new avatar URL
       setProfile(prev => ({ ...prev, avatar_url: result.avatar_url }));
@@ -212,8 +195,13 @@ const UserProfile = () => {
       toast.success('Profile picture updated!', { id: toastId });
       
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload avatar', { id: toastId });
+      console.error('Upload error details:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
+      
+      // Show detailed error message
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to upload avatar';
+      toast.error(errorMsg, { id: toastId, duration: 5000 });
     } finally {
       setUploadingAvatar(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';
@@ -224,14 +212,16 @@ const UserProfile = () => {
   const getMediaUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `http://localhost:8080${path}`;
+    // Use the correct backend URL
+    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+    return `${backendUrl}${path}`;
   };
 
   // Get optimized image URL for Cloudinary images
   const getOptimizedImageUrl = (url) => {
     if (!url) return null;
     // Only optimize if it's a Cloudinary URL
-    if (url.includes('cloudinary')) {
+    if (typeof url === 'string' && url.includes('cloudinary')) {
       return cloudinaryService.getProductThumbnail(url);
     }
     return getMediaUrl(url);
@@ -243,7 +233,7 @@ const UserProfile = () => {
     if (!avatarUrl) return null;
     
     // If it's a Cloudinary URL, optimize it
-    if (avatarUrl.includes('cloudinary')) {
+    if (typeof avatarUrl === 'string' && avatarUrl.includes('cloudinary')) {
       return cloudinaryService.getAvatarUrl(avatarUrl, 128);
     }
     // Otherwise return as-is (might be local URL)
