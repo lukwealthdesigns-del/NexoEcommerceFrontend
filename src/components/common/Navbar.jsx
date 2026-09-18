@@ -99,7 +99,7 @@ const Navbar = () => {
             <ShoppingBag className="h-8 w-8 text-brand-orange" />
             <span className="text-xl font-bold">
               <span className="text-gray-900 dark:text-white">Nexo</span>
-              <span className="text-brand-orange">Elite</span>
+              <span className="text-brand-orange">Leolite</span>
             </span>
           </Link>
 

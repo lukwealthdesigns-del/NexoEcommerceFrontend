@@ -17,7 +17,7 @@ const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
     // General Settings
-    site_name: 'NexoElite',
+    site_name: 'NexoLeolite',
     site_description: 'Buy and sell everything anywhere',
     site_logo: '',
     site_favicon: '',

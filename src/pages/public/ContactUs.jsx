@@ -102,7 +102,7 @@ const ContactUs = () => {
                 style={{ border: 0 }}
                 allowFullScreen=""
                 loading="lazy"
-                title="NexoElite Location"
+                title="NexoLeolite Location"
               ></iframe>
             </div>
           </div>

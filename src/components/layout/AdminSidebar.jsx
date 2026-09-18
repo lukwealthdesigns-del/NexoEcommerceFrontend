@@ -92,7 +92,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar }) => {
       <div className={`h-16 flex items-center ${isOpen ? 'px-6' : 'justify-center'} border-b border-gray-800`}>
         {isOpen ? (
           <Link to="/admin" className="text-xl font-bold">
-            Nexo<span className="text-brand-orange">Elite</span>
+            Nexo<span className="text-brand-orange">Leolite</span>
             <span className="text-xs text-gray-400 block">Admin Panel</span>
           </Link>
         ) : (

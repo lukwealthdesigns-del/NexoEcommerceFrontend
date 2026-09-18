@@ -48,7 +48,7 @@
 //         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
 //           {sidebarOpen && (
 //             <Link to="/" className="font-bold text-xl bg-gradient-to-r from-brand-orange to-orange-500 bg-clip-text text-transparent">
-//               NexoElite
+//               NexoLeolite
 //             </Link>
 //           )}
 //           <button
@@ -193,7 +193,7 @@ const UserDashboardLayout = () => {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
         <Link to="/" className="font-bold text-lg bg-gradient-to-r from-brand-orange to-orange-500 bg-clip-text text-transparent">
-          NexoElite
+          NexoLeolite
         </Link>
         <button
           onClick={() => setMobileMenuOpen(true)}
@@ -213,7 +213,7 @@ const UserDashboardLayout = () => {
           <aside className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-gray-800 z-50 lg:hidden flex flex-col shadow-xl">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <Link to="/" className="font-bold text-xl bg-gradient-to-r from-brand-orange to-orange-500 bg-clip-text text-transparent">
-                NexoElite
+                NexoLeolite
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(false)}
@@ -280,7 +280,7 @@ const UserDashboardLayout = () => {
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           {sidebarOpen && (
             <Link to="/" className="font-bold text-xl bg-gradient-to-r from-brand-orange to-orange-500 bg-clip-text text-transparent">
-              NexoElite
+              NexoLeolite
             </Link>
           )}
           <button

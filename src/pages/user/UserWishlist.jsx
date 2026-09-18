@@ -348,7 +348,7 @@ const UserWishlist = () => {
         
         {/* Help Section */}
         <div className="mt-8 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm text-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Need help with NexoElite?</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Need help with NexoLeolite?</h3>
           <p className="text-gray-500 dark:text-gray-400 mb-4">Chat with our team or browse our catalogue!</p>
           <div className="flex gap-3 justify-center">
             <Link to="/contact" className="px-4 py-2 bg-brand-orange text-white rounded-lg hover:bg-orange-600 transition">

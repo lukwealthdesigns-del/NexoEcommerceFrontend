@@ -77,7 +77,7 @@ const Footer = () => {
               <div className="flex items-center space-x-2 mb-4">
                 <span className="text-2xl font-bold">
                   <span className="text-white">Nexo</span>
-                  <span className="text-brand-orange">Elite</span>
+                  <span className="text-brand-orange">Leolite</span>
                 </span>
               </div>
               <p className="text-gray-200 text-sm mb-4">
@@ -185,7 +185,7 @@ const Footer = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
             <p className="text-white/80 text-sm">
-              &copy; {new Date().getFullYear()} NexoElite. All rights reserved.
+              &copy; {new Date().getFullYear()} NexoLeolite. All rights reserved.
             </p>
             <div className="flex space-x-6">
               <Link to="/privacy" className="text-white/80 hover:text-white text-sm transition">Privacy Policy</Link>

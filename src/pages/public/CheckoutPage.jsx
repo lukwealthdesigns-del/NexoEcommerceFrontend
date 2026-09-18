@@ -482,7 +482,7 @@ const CheckoutPage = () => {
   const paymentMethods = [
     { id: 'card', name: 'Credit / Debit Card', icon: CreditCard, description: 'Pay with Visa, Mastercard, Verve' },
     { id: 'bank_transfer', name: 'Bank Transfer', icon: Banknote, description: 'Direct bank transfer' },
-    { id: 'wallet', name: 'Wallet', icon: Wallet, description: 'Use your NexoElite wallet' },
+    { id: 'wallet', name: 'Wallet', icon: Wallet, description: 'Use your NexoLeolite wallet' },
   ];
 
   // Validate form before showing Paystack

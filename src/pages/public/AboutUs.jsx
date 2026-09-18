@@ -20,7 +20,7 @@
 //       {/* Hero Section */}
 //       <section className="bg-gradient-to-r from-brand-orange to-orange-600 text-white py-20">
 //         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-//           <h1 className="text-4xl md:text-5xl font-bold mb-4">About NexoElite</h1>
+//           <h1 className="text-4xl md:text-5xl font-bold mb-4">About NexoLeolite</h1>
 //           <p className="text-xl max-w-3xl mx-auto">
 //             Africa's fastest growing marketplace connecting millions of buyers and sellers
 //           </p>
@@ -80,7 +80,7 @@
 //             <div>
 //               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Our Story</h2>
 //               <p className="text-gray-600 dark:text-gray-400 mb-4">
-//                 Founded in 2020, NexoElite started with a simple idea: make it easy for anyone to buy 
+//                 Founded in 2020, NexoLeolite started with a simple idea: make it easy for anyone to buy 
 //                 and sell quality products online. What began as a small startup in Lagos has grown into 
 //                 one of Africa's fastest-growing e-commerce platforms.
 //               </p>
@@ -201,7 +201,7 @@ const AboutUs = () => {
         </div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">About NexoElite</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">About NexoLeolite</h1>
           <p className="text-xl text-white/90 max-w-3xl mx-auto">
             Africa's fastest growing marketplace connecting millions of buyers and sellers
           </p>
@@ -270,7 +270,7 @@ const AboutUs = () => {
             <div>
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Our Story</h2>
               <p className="text-gray-700 dark:text-gray-300 mb-4">
-                Founded in 2026, NexoElite started with a simple idea: make it easy for anyone to buy 
+                Founded in 2026, NexoLeolite started with a simple idea: make it easy for anyone to buy 
                 and sell quality products online. What began as a small startup in Abeokuta has grown into 
                 one of Africa's fastest-growing e-commerce platforms.
               </p>

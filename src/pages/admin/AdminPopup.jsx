@@ -44,7 +44,7 @@ const AdminPopup = () => {
           
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-              Need help with NexoElite?
+              Need help with NexoLeolite?
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               Chat with our team or browse our catalogue!

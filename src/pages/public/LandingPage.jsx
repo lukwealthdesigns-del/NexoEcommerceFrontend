@@ -247,7 +247,7 @@ const LandingPage = () => {
               <span className="text-brand-orange">Anywhere</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-100 mb-10 drop-shadow">
-              Join millions of buyers and sellers on NexoElite – Africa's fastest growing marketplace
+              Join millions of buyers and sellers on NexoLeolite – Africa's fastest growing marketplace
             </p>
             
             <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-2 flex flex-col md:flex-row gap-2">
@@ -425,7 +425,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">Ready to Start Selling?</h2>
           <p className="text-gray-600 dark:text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-            Join thousands of successful sellers on NexoElite and grow your business
+            Join thousands of successful sellers on NexoLeolite and grow your business
           </p>
           <Link 
             to="/signup" 

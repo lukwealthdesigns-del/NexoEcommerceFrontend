@@ -128,7 +128,7 @@ export const adminService = {
     } catch (error) {
       console.error('Failed to get settings:', error);
       return {
-        site_name: 'NexoElite',
+        site_name: 'NexoLeolite',
         site_description: 'Buy and sell everything anywhere',
         contact_email: 'support@nexoelite.com',
         support_phone: '+2348012345678',
