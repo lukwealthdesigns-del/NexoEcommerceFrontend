@@ -56,7 +56,7 @@ const ContactUs = () => {
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Visit Us</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    123 Lagos Street, Ikeja<br />
+                    ikeja<br />
                     Lagos, Nigeria
                   </p>
                 </div>
@@ -71,7 +71,7 @@ const ContactUs = () => {
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Call Us</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    +234 81 263 328 66<br />
+                    +234 81 263 328 66,+2347085125588<br />
                     Mon-Fri, 9am - 6pm
                   </p>
                 </div>
@@ -86,8 +86,8 @@ const ContactUs = () => {
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Email Us</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    nexoelites@gmail.com<br />
-                    olabodeolamide323@gmail.com
+                    nexoleolite@gmail.com<br />
+                    
                   </p>
                 </div>
               </div>

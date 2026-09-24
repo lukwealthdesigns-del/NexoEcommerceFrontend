@@ -1,1556 +1,1432 @@
 
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Crown,
+  Users,
+  DollarSign,
+  CreditCard,
+  Clock,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Check,
+  RefreshCw,
+  Power,
+  PowerOff,
+  Tag,
+  Zap,
+} from "lucide-react";
 
-// import React, { useState, useEffect } from 'react';
-// import { 
-//   Crown, Edit, Save, X, Plus, Trash2, TrendingUp, 
-//   DollarSign, Calendar, Users, Check, AlertCircle,
-//   Eye, Star, Headphones, Rocket, Zap, Gem, Settings,
-//   RefreshCw, Download, Search, Filter, Tag
-// } from 'lucide-react';
-// import { adminService } from '../../services/admin';
-// import { premiumService } from '../../services/premium';
-// import { useAuthStore } from '../../store/authStore';
-// import toast from 'react-hot-toast';
+import adminService from "../../services/admin";
 
-// const AdminPremium = () => {
-//   const { user } = useAuthStore();
-//   const [plans, setPlans] = useState({});
-//   const [subscriptions, setSubscriptions] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [editingPlan, setEditingPlan] = useState(null);
-//   const [showAddModal, setShowAddModal] = useState(false);
-//   const [showPromoModal, setShowPromoModal] = useState(false);
-//   const [stats, setStats] = useState({
-//     totalPremiumUsers: 0,
-//     totalRevenue: 0,
-//     activeSubscriptions: 0,
-//     expiringSoon: 0,
-//   });
-  
-//   const [editForm, setEditForm] = useState({
-//     name: '',
-//     price: 0,
-//     duration_days: 30,
-//     boost_multiplier: 2,
-//     features: [],
-//     is_active: true
-//   });
-  
-//   const [newFeature, setNewFeature] = useState('');
-//   const [promoCode, setPromoCode] = useState({
-//     code: '',
-//     discount_percent: 10,
-//     valid_until: '',
-//     plan: 'all'
-//   });
+const BUILT_IN_PLANS = ["basic", "standard", "pro"];
 
-//   // New plan form state
-//   const [newPlanForm, setNewPlanForm] = useState({
-//     plan_key: '',
-//     name: '',
-//     price: 5000,
-//     duration_days: 30,
-//     boost_multiplier: 2,
-//     features: ''
-//   });
+const emptyPlan = {
+  plan_key: "",
+  name: "",
+  price: 0,
+  duration_days: 30,
+  boost_multiplier: 2,
+  features: [],
+  is_active: true,
+};
 
-//   useEffect(() => {
-//     loadPremiumData();
-//   }, []);
+function normalizePlans(data) {
+  if (Array.isArray(data)) return data;
 
-//   const loadPremiumData = async () => {
-//     setLoading(true);
-//     try {
-//       const [plansData, subscriptionsData, statsData] = await Promise.all([
-//         premiumService.getPlans(),
-//         adminService.getAllPremiumSubscriptions(),
-//         adminService.getPremiumStats()
-//       ]);
-      
-//       setPlans(plansData || {});
-//       setSubscriptions(subscriptionsData?.subscriptions || []);
-//       setStats(statsData || {
-//         totalPremiumUsers: 0,
-//         totalRevenue: 0,
-//         activeSubscriptions: 0,
-//         expiringSoon: 0,
-//       });
-//     } catch (error) {
-//       console.error('Failed to load premium data:', error);
-//       toast.error('Failed to load premium data');
-//       // Set default plans if API fails
-//       setPlans({
-//         basic: {
-//           name: "Basic",
-//           price: 5000,
-//           duration_days: 30,
-//           boost_multiplier: 2,
-//           features: ["2x product view boost", "Priority support", "Featured in category"]
-//         },
-//         standard: {
-//           name: "Standard",
-//           price: 15000,
-//           duration_days: 90,
-//           boost_multiplier: 5,
-//           features: ["5x product view boost", "Priority support", "Featured in category & search"]
-//         },
-//         pro: {
-//           name: "Pro",
-//           price: 50000,
-//           duration_days: 365,
-//           boost_multiplier: 10,
-//           features: ["10x product view boost", "24/7 priority support", "Featured on homepage"]
-//         }
-//       });
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+  if (Array.isArray(data?.plans)) {
+    return data.plans;
+  }
 
-//   const handleEditPlan = (planKey, planData) => {
-//     setEditingPlan(planKey);
-//     setEditForm({
-//       name: planData?.name || '',
-//       price: planData?.price || 0,
-//       duration_days: planData?.duration_days || 30,
-//       boost_multiplier: planData?.boost_multiplier || 2,
-//       features: [...(planData?.features || [])],
-//       is_active: true
-//     });
-//   };
+  if (data?.plans && typeof data.plans === "object") {
+    return Object.entries(data.plans).map(([key, value]) => ({
+      plan_key: key,
+      key,
+      ...value,
+    }));
+  }
 
-//   const handleSavePlan = async () => {
-//     if (!editingPlan) return;
-    
-//     try {
-//       await adminService.updatePremiumPlan(editingPlan, {
-//         name: editForm.name,
-//         price: editForm.price || 0,
-//         duration_days: editForm.duration_days || 30,
-//         boost_multiplier: editForm.boost_multiplier || 2,
-//         features: editForm.features || [],
-//         is_active: true
-//       });
-      
-//       // Update local state immediately
-//       setPlans(prev => ({
-//         ...prev,
-//         [editingPlan]: {
-//           ...prev[editingPlan],
-//           name: editForm.name,
-//           price: editForm.price || 0,
-//           duration_days: editForm.duration_days || 30,
-//           boost_multiplier: editForm.boost_multiplier || 2,
-//           features: editForm.features || [],
-//         }
-//       }));
-      
-//       toast.success(`${editForm.name || editingPlan} plan updated successfully`);
-//       setEditingPlan(null);
-//       setNewFeature('');
-      
-//       // Refresh stats only
-//       const statsData = await adminService.getPremiumStats();
-//       setStats(statsData || {
-//         totalPremiumUsers: 0,
-//         totalRevenue: 0,
-//         activeSubscriptions: 0,
-//         expiringSoon: 0,
-//       });
-      
-//     } catch (error) {
-//       console.error('Update error:', error);
-//       toast.error(error.response?.data?.detail || 'Failed to update plan');
-//     }
-//   };
+  if (data && typeof data === "object") {
+    return Object.entries(data)
+      .filter(
+        ([key, value]) =>
+          value &&
+          typeof value === "object" &&
+          !Array.isArray(value)
+      )
+      .map(([key, value]) => ({
+        plan_key: key,
+        key,
+        ...value,
+      }));
+  }
 
-//   const handleCreatePlan = async () => {
-//     if (!newPlanForm.plan_key || !newPlanForm.name || !newPlanForm.price) {
-//       toast.error('Please fill all required fields');
-//       return;
-//     }
-    
-//     try {
-//       const featuresArray = newPlanForm.features.split(',').map(f => f.trim()).filter(f => f);
-      
-//       await adminService.createPremiumPlan({
-//         plan_key: newPlanForm.plan_key.toLowerCase(),
-//         name: newPlanForm.name,
-//         price: newPlanForm.price || 0,
-//         duration_days: newPlanForm.duration_days || 30,
-//         boost_multiplier: newPlanForm.boost_multiplier || 2,
-//         features: featuresArray,
-//         is_active: true
-//       });
-      
-//       toast.success(`${newPlanForm.name} plan created successfully`);
-//       setShowAddModal(false);
-//       setNewPlanForm({
-//         plan_key: '',
-//         name: '',
-//         price: 5000,
-//         duration_days: 30,
-//         boost_multiplier: 2,
-//         features: ''
-//       });
-//       loadPremiumData();
-//     } catch (error) {
-//       console.error('Create plan error:', error);
-//       toast.error(error.response?.data?.detail || 'Failed to create plan');
-//     }
-//   };
+  return [];
+}
 
-//   const handleAddFeature = () => {
-//     if (newFeature.trim()) {
-//       setEditForm({
-//         ...editForm,
-//         features: [...editForm.features, newFeature.trim()]
-//       });
-//       setNewFeature('');
-//     }
-//   };
+function normalizeSubscriptions(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.subscriptions)) return data.subscriptions;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
 
-//   const handleRemoveFeature = (index) => {
-//     const newFeatures = [...editForm.features];
-//     newFeatures.splice(index, 1);
-//     setEditForm({ ...editForm, features: newFeatures });
-//   };
+function getPlanKey(plan) {
+  return plan?.plan_key || plan?.key || plan?.plan || "";
+}
 
-//   const handleCreatePromo = async () => {
-//     if (!promoCode.code) {
-//       toast.error('Please enter a promo code');
-//       return;
-//     }
-//     try {
-//       await adminService.createPromoCode(promoCode);
-//       toast.success('Promo code created successfully');
-//       setShowPromoModal(false);
-//       setPromoCode({ code: '', discount_percent: 10, valid_until: '', plan: 'all' });
-//     } catch (error) {
-//       toast.error('Failed to create promo code');
-//     }
-//   };
+function getErrorMessage(error) {
+  return (
+    error?.response?.data?.detail ||
+    error?.response?.data?.message ||
+    error?.message ||
+    "Something went wrong."
+  );
+}
 
-//   const formatPrice = (price) => {
-//     if (!price && price !== 0) return '₦0';
-//     return new Intl.NumberFormat('en-NG', {
-//       style: 'currency',
-//       currency: 'NGN',
-//       minimumFractionDigits: 0,
-//       maximumFractionDigits: 0,
-//     }).format(price);
-//   };
+function formatMoney(value) {
+  const amount = Number(value || 0);
 
-//   const getPlanIcon = (planKey) => {
-//     switch(planKey) {
-//       case 'basic': return <Zap className="h-5 w-5" />;
-//       case 'standard': return <Rocket className="h-5 w-5" />;
-//       case 'pro': return <Gem className="h-5 w-5" />;
-//       default: return <Crown className="h-5 w-5" />;
-//     }
-//   };
+  return `₦${amount.toLocaleString("en-NG", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
-//   const getPlanColor = (planKey) => {
-//     switch(planKey) {
-//       case 'basic': return 'from-blue-500 to-blue-600';
-//       case 'standard': return 'from-purple-500 to-purple-600';
-//       case 'pro': return 'from-yellow-500 to-orange-500';
-//       default: return 'from-brand-orange to-orange-600';
-//     }
-//   };
-
-//   const statCards = [
-//     { 
-//       title: 'Total Premium Users', 
-//       value: stats.totalPremiumUsers || 0, 
-//       icon: Crown, 
-//       color: 'bg-yellow-500',
-//       change: '+12%'
-//     },
-//     { 
-//       title: 'Total Revenue', 
-//       value: formatPrice(stats.totalRevenue || 0), 
-//       icon: DollarSign, 
-//       color: 'bg-green-500',
-//       change: '+23%'
-//     },
-//     { 
-//       title: 'Active Subscriptions', 
-//       value: stats.activeSubscriptions || 0, 
-//       icon: Users, 
-//       color: 'bg-blue-500',
-//       change: '+8%'
-//     },
-//     { 
-//       title: 'Expiring Soon', 
-//       value: stats.expiringSoon || 0, 
-//       icon: Calendar, 
-//       color: 'bg-red-500',
-//       change: '-5%'
-//     },
-//   ];
-
-//   if (loading) {
-//     return (
-//       <div className="flex items-center justify-center min-h-screen">
-//         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-orange"></div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-//         {/* Header */}
-//         <div className="mb-8">
-//           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Premium Management</h1>
-//           <p className="text-gray-600 dark:text-gray-400 mt-2">Manage premium plans, pricing, and subscriptions</p>
-//         </div>
-
-//         {/* Stats Cards */}
-//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-//           {statCards.map((stat, index) => (
-//             <div key={index} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-//               <div className="flex items-center justify-between">
-//                 <div>
-//                   <p className="text-sm text-gray-600 dark:text-gray-400">{stat.title}</p>
-//                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
-//                   <p className={`text-sm mt-2 ${stat.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-//                     {stat.change} from last month
-//                   </p>
-//                 </div>
-//                 <div className={`${stat.color} p-3 rounded-xl`}>
-//                   <stat.icon className="h-6 w-6 text-white" />
-//                 </div>
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-
-//         {/* Action Buttons */}
-//         <div className="flex justify-between items-center mb-6">
-//           <div className="flex space-x-3">
-//             <button
-//               onClick={() => setShowAddModal(true)}
-//               className="bg-brand-orange text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-orange-600 transition"
-//             >
-//               <Plus className="h-5 w-5" />
-//               <span>Add New Plan</span>
-//             </button>
-//             <button
-//               onClick={() => setShowPromoModal(true)}
-//               className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-//             >
-//               <Tag className="h-5 w-5" />
-//               <span>Create Promo Code</span>
-//             </button>
-//           </div>
-//           <button onClick={loadPremiumData} className="text-gray-500 hover:text-gray-700">
-//             <RefreshCw className="h-5 w-5" />
-//           </button>
-//         </div>
-
-//         {/* Premium Plans Management */}
-//         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden mb-8">
-//           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-//             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Premium Plans</h2>
-//           </div>
-          
-//           <div className="p-6">
-//             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//               {Object.entries(plans).map(([planKey, planData]) => (
-//                 <div key={planKey} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-//                   {/* Plan Header */}
-//                   <div className={`bg-gradient-to-r ${getPlanColor(planKey)} p-4 text-white`}>
-//                     <div className="flex items-center justify-between">
-//                       <div className="flex items-center space-x-2">
-//                         {getPlanIcon(planKey)}
-//                         <h3 className="text-xl font-bold capitalize">{planData?.name || planKey}</h3>
-//                       </div>
-//                       {editingPlan !== planKey && (
-//                         <button
-//                           onClick={() => handleEditPlan(planKey, planData)}
-//                           className="p-1 hover:bg-white/20 rounded-lg transition"
-//                         >
-//                           <Edit className="h-4 w-4" />
-//                         </button>
-//                       )}
-//                     </div>
-//                   </div>
-                  
-//                   {/* Plan Content */}
-//                   <div className="p-4">
-//                     {editingPlan === planKey ? (
-//                       // Edit Mode
-//                       <div className="space-y-4">
-//                         <div>
-//                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                             Plan Name
-//                           </label>
-//                           <input
-//                             type="text"
-//                             value={editForm.name || ''}
-//                             onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-//                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                           />
-//                         </div>
-                        
-//                         <div>
-//                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                             Price (₦)
-//                           </label>
-//                           <input
-//                             type="number"
-//                             value={editForm.price || 0}
-//                             onChange={(e) => setEditForm({ ...editForm, price: parseInt(e.target.value) || 0 })}
-//                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                           />
-//                         </div>
-                        
-//                         <div>
-//                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                             Duration (days)
-//                           </label>
-//                           <input
-//                             type="number"
-//                             value={editForm.duration_days || 30}
-//                             onChange={(e) => setEditForm({ ...editForm, duration_days: parseInt(e.target.value) || 30 })}
-//                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                           />
-//                         </div>
-                        
-//                         <div>
-//                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                             View Boost Multiplier
-//                           </label>
-//                           <input
-//                             type="number"
-//                             value={editForm.boost_multiplier || 2}
-//                             onChange={(e) => setEditForm({ ...editForm, boost_multiplier: parseInt(e.target.value) || 2 })}
-//                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                           />
-//                         </div>
-                        
-//                         <div>
-//                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                             Features
-//                           </label>
-//                           <div className="space-y-2 mb-2">
-//                             {editForm.features?.map((feature, idx) => (
-//                               <div key={idx} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded-lg">
-//                                 <span className="text-sm">{feature}</span>
-//                                 <button
-//                                   onClick={() => handleRemoveFeature(idx)}
-//                                   className="text-red-500 hover:text-red-600"
-//                                 >
-//                                   <X className="h-4 w-4" />
-//                                 </button>
-//                               </div>
-//                             ))}
-//                           </div>
-//                           <div className="flex space-x-2">
-//                             <input
-//                               type="text"
-//                               value={newFeature}
-//                               onChange={(e) => setNewFeature(e.target.value)}
-//                               placeholder="Add new feature"
-//                               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                               onKeyPress={(e) => e.key === 'Enter' && handleAddFeature()}
-//                             />
-//                             <button
-//                               onClick={handleAddFeature}
-//                               className="px-4 py-2 bg-brand-orange text-white rounded-lg hover:bg-orange-600 transition"
-//                             >
-//                               Add
-//                             </button>
-//                           </div>
-//                         </div>
-                        
-//                         <div className="flex space-x-3 pt-4">
-//                           <button
-//                             onClick={handleSavePlan}
-//                             className="flex-1 bg-brand-orange text-white py-2 rounded-lg font-semibold hover:bg-orange-600 transition flex items-center justify-center space-x-2"
-//                           >
-//                             <Save className="h-4 w-4" />
-//                             <span>Save Changes</span>
-//                           </button>
-//                           <button
-//                             onClick={() => setEditingPlan(null)}
-//                             className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-//                           >
-//                             Cancel
-//                           </button>
-//                         </div>
-//                       </div>
-//                     ) : (
-//                       // View Mode
-//                       <>
-//                         <div className="mb-4">
-//                           <p className="text-3xl font-bold text-brand-orange">
-//                             {formatPrice(planData?.price || 0)}
-//                           </p>
-//                           <p className="text-sm text-gray-500">for {planData?.duration_days || 0} days</p>
-//                         </div>
-                        
-//                         <div className="mb-4">
-//                           <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-//                             Features:
-//                           </p>
-//                           <ul className="space-y-1">
-//                             {(planData?.features || []).slice(0, 4).map((feature, idx) => (
-//                               <li key={idx} className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-//                                 <Check className="h-3 w-3 text-green-500" />
-//                                 <span>{feature}</span>
-//                               </li>
-//                             ))}
-//                             {(planData?.features?.length || 0) > 4 && (
-//                               <li className="text-xs text-gray-500">
-//                                 +{(planData?.features?.length || 0) - 4} more features
-//                               </li>
-//                             )}
-//                           </ul>
-//                         </div>
-                        
-//                         <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-//                           <div className="flex justify-between text-sm">
-//                             <span className="text-gray-500">Daily price:</span>
-//                             <span className="font-semibold">
-//                               {formatPrice(Math.ceil((planData?.price || 0) / (planData?.duration_days || 1)))}
-//                             </span>
-//                           </div>
-//                           <div className="flex justify-between text-sm mt-1">
-//                             <span className="text-gray-500">View boost:</span>
-//                             <span className="font-semibold text-brand-orange">
-//                               {planData?.boost_multiplier || 2}x
-//                             </span>
-//                           </div>
-//                         </div>
-//                       </>
-//                     )}
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Active Subscriptions Table */}
-//         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
-//           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-//             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Active Subscriptions</h2>
-//           </div>
-          
-//           <div className="overflow-x-auto">
-//             <table className="w-full">
-//               <thead>
-//                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-//                   <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">User</th>
-//                   <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Plan</th>
-//                   <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Started</th>
-//                   <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Expires</th>
-//                   <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Status</th>
-//                   <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Actions</th>
-//                 </tr>
-//               </thead>
-//               <tbody>
-//                 {subscriptions.length === 0 ? (
-//                   <tr>
-//                     <td colSpan="6" className="text-center py-8 text-gray-500">
-//                       No active subscriptions found
-//                     </td>
-//                   </tr>
-//                 ) : (
-//                   subscriptions.map((sub) => (
-//                     <tr key={sub.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-//                       <td className="py-3 px-6">
-//                         <div className="flex items-center space-x-2">
-//                           <div className="w-8 h-8 rounded-full bg-gradient-to-r from-brand-orange to-orange-400 flex items-center justify-center text-white text-sm">
-//                             {sub.user_name?.[0] || 'U'}
-//                           </div>
-//                           <span className="text-sm text-gray-900 dark:text-white">{sub.user_name}</span>
-//                         </div>
-//                        </td>
-//                       <td className="py-3 px-6">
-//                         <span className={`inline-flex items-center space-x-1 px-2 py-1 text-xs rounded-full capitalize ${
-//                           sub.plan === 'pro' ? 'bg-yellow-100 text-yellow-700' :
-//                           sub.plan === 'standard' ? 'bg-purple-100 text-purple-700' :
-//                           'bg-blue-100 text-blue-700'
-//                         }`}>
-//                           {getPlanIcon(sub.plan)}
-//                           <span>{sub.plan}</span>
-//                         </span>
-//                         </td>
-//                       <td className="py-3 px-6 text-sm text-gray-600 dark:text-gray-400">
-//                         {sub.started_at ? new Date(sub.started_at).toLocaleDateString() : 'N/A'}
-//                         </td>
-//                       <td className="py-3 px-6 text-sm text-gray-600 dark:text-gray-400">
-//                         {sub.expires_at ? new Date(sub.expires_at).toLocaleDateString() : 'N/A'}
-//                         </td>
-//                       <td className="py-3 px-6">
-//                         <span className="inline-flex items-center space-x-1 px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
-//                           <Check className="h-3 w-3" />
-//                           <span>Active</span>
-//                         </span>
-//                         </td>
-//                       <td className="py-3 px-6">
-//                         <button className="text-red-500 hover:text-red-600 text-sm">
-//                           Cancel
-//                         </button>
-//                         </td>
-//                     </tr>
-//                   ))
-//                 )}
-//               </tbody>
-//             </table>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Add Plan Modal */}
-//       {showAddModal && (
-//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4">
-//             <div className="flex justify-between items-center mb-4">
-//               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add New Premium Plan</h2>
-//               <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-700">
-//                 <X className="h-5 w-5" />
-//               </button>
-//             </div>
-//             <div className="space-y-4">
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Plan Key *
-//                 </label>
-//                 <input
-//                   type="text"
-//                   value={newPlanForm.plan_key}
-//                   onChange={(e) => setNewPlanForm({ ...newPlanForm, plan_key: e.target.value })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                   placeholder="e.g., enterprise"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Plan Name *
-//                 </label>
-//                 <input
-//                   type="text"
-//                   value={newPlanForm.name}
-//                   onChange={(e) => setNewPlanForm({ ...newPlanForm, name: e.target.value })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                   placeholder="e.g., Enterprise"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Price (₦) *
-//                 </label>
-//                 <input
-//                   type="number"
-//                   value={newPlanForm.price}
-//                   onChange={(e) => setNewPlanForm({ ...newPlanForm, price: parseInt(e.target.value) || 0 })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                   placeholder="50000"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Duration (days) *
-//                 </label>
-//                 <input
-//                   type="number"
-//                   value={newPlanForm.duration_days}
-//                   onChange={(e) => setNewPlanForm({ ...newPlanForm, duration_days: parseInt(e.target.value) || 30 })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                   placeholder="365"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Boost Multiplier
-//                 </label>
-//                 <input
-//                   type="number"
-//                   value={newPlanForm.boost_multiplier}
-//                   onChange={(e) => setNewPlanForm({ ...newPlanForm, boost_multiplier: parseInt(e.target.value) || 2 })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                   placeholder="10"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Features (comma separated)
-//                 </label>
-//                 <input
-//                   type="text"
-//                   value={newPlanForm.features}
-//                   onChange={(e) => setNewPlanForm({ ...newPlanForm, features: e.target.value })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                   placeholder="Feature 1, Feature 2, Feature 3"
-//                 />
-//               </div>
-//             </div>
-//             <div className="flex space-x-3 mt-6">
-//               <button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-//                 Cancel
-//               </button>
-//               <button onClick={handleCreatePlan} className="flex-1 bg-brand-orange text-white py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
-//                 Create Plan
-//               </button>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-
-//       {/* Promo Code Modal */}
-//       {showPromoModal && (
-//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4">
-//             <div className="flex justify-between items-center mb-4">
-//               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create Promo Code</h2>
-//               <button onClick={() => setShowPromoModal(false)} className="text-gray-500 hover:text-gray-700">
-//                 <X className="h-5 w-5" />
-//               </button>
-//             </div>
-//             <div className="space-y-4">
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Promo Code
-//                 </label>
-//                 <input
-//                   type="text"
-//                   value={promoCode.code}
-//                   onChange={(e) => setPromoCode({ ...promoCode, code: e.target.value.toUpperCase() })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                   placeholder="PREMIUM20"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Discount (%)
-//                 </label>
-//                 <input
-//                   type="number"
-//                   value={promoCode.discount_percent}
-//                   onChange={(e) => setPromoCode({ ...promoCode, discount_percent: parseInt(e.target.value) || 0 })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                   placeholder="10"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Valid Until
-//                 </label>
-//                 <input
-//                   type="date"
-//                   value={promoCode.valid_until}
-//                   onChange={(e) => setPromoCode({ ...promoCode, valid_until: e.target.value })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-//                   Applicable Plan
-//                 </label>
-//                 <select
-//                   value={promoCode.plan}
-//                   onChange={(e) => setPromoCode({ ...promoCode, plan: e.target.value })}
-//                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-//                 >
-//                   <option value="all">All Plans</option>
-//                   <option value="basic">Basic Only</option>
-//                   <option value="standard">Standard Only</option>
-//                   <option value="pro">Pro Only</option>
-//                 </select>
-//               </div>
-//             </div>
-//             <div className="flex space-x-3 mt-6">
-//               <button onClick={() => setShowPromoModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-//                 Cancel
-//               </button>
-//               <button onClick={handleCreatePromo} className="flex-1 bg-brand-orange text-white py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
-//                 Create Promo
-//               </button>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default AdminPremium;
-
-import React, { useState, useEffect } from 'react';
-import { 
-  Crown, Edit, Save, X, Plus, Trash2, TrendingUp, 
-  DollarSign, Calendar, Users, Check, AlertCircle,
-  Eye, Star, Headphones, Rocket, Zap, Gem, Settings,
-  RefreshCw, Download, Search, Filter, Tag
-} from 'lucide-react';
-import { adminService } from '../../services/admin';
-import { premiumService } from '../../services/premium';
-import { useAuthStore } from '../../store/authStore';
-import toast from 'react-hot-toast';
-
-const AdminPremium = () => {
-  const { user } = useAuthStore();
-  const [plans, setPlans] = useState({});
+export default function AdminPremium() {
+  const [plans, setPlans] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
+  const [stats, setStats] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
   const [editingPlan, setEditingPlan] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showPromoModal, setShowPromoModal] = useState(false);
-  const [stats, setStats] = useState({
-    totalPremiumUsers: 0,
-    totalRevenue: 0,
-    activeSubscriptions: 0,
-    expiringSoon: 0,
-  });
-  
-  const [editForm, setEditForm] = useState({
-    name: '',
-    price: 0,
-    duration_days: 30,
-    boost_multiplier: 2,
-    features: [],
-    is_active: true
-  });
-  
-  const [newFeature, setNewFeature] = useState('');
-  const [promoCode, setPromoCode] = useState({
-    code: '',
-    discount_percent: 10,
-    valid_until: '',
-    plan: 'all'
-  });
+  const [planForm, setPlanForm] = useState(emptyPlan);
 
-  // New plan form state
-  const [newPlanForm, setNewPlanForm] = useState({
-    plan_key: '',
-    name: '',
-    price: 5000,
-    duration_days: 30,
-    boost_multiplier: 2,
-    features: ''
-  });
+  const [featureInput, setFeatureInput] = useState("");
+  const [createFeatureInput, setCreateFeatureInput] = useState("");
 
-  useEffect(() => {
-    loadPremiumData();
-  }, []);
+  const [activeTab, setActiveTab] = useState("plans");
 
-  const loadPremiumData = async () => {
-    setLoading(true);
+  const loadData = async () => {
     try {
-      const [plansData, subscriptionsData, statsData] = await Promise.all([
-        premiumService.getPlans(),
-        adminService.getAllPremiumSubscriptions(),
-        adminService.getPremiumStats()
-      ]);
-      
-      setPlans(plansData || {});
-      setSubscriptions(subscriptionsData?.subscriptions || []);
-      setStats(statsData || {
-        totalPremiumUsers: 0,
-        totalRevenue: 0,
-        activeSubscriptions: 0,
-        expiringSoon: 0,
-      });
+      setLoading(true);
+
+      const [plansResult, subscriptionsResult, statsResult] =
+        await Promise.all([
+          adminService.getPremiumPlans(),
+          adminService.getAllPremiumSubscriptions(),
+          adminService.getPremiumStats(),
+        ]);
+
+      setPlans(normalizePlans(plansResult));
+      setSubscriptions(normalizeSubscriptions(subscriptionsResult));
+      setStats(statsResult || {});
     } catch (error) {
-      console.error('Failed to load premium data:', error);
-      toast.error('Failed to load premium data');
-      // Set default plans if API fails
-      setPlans({
-        basic: {
-          name: "Basic",
-          price: 5000,
-          duration_days: 30,
-          boost_multiplier: 2,
-          features: ["2x product view boost", "Priority support", "Featured in category"]
-        },
-        standard: {
-          name: "Standard",
-          price: 15000,
-          duration_days: 90,
-          boost_multiplier: 5,
-          features: ["5x product view boost", "Priority support", "Featured in category & search"]
-        },
-        pro: {
-          name: "Pro",
-          price: 50000,
-          duration_days: 365,
-          boost_multiplier: 10,
-          features: ["10x product view boost", "24/7 priority support", "Featured on homepage"]
-        }
-      });
+      console.error("Premium loading error:", error);
+      window.alert(`Failed to load Premium data.\n\n${getErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditPlan = (planKey, planData) => {
-    setEditingPlan(planKey);
-    setEditForm({
-      name: planData?.name || '',
-      price: planData?.price || 0,
-      duration_days: planData?.duration_days || 30,
-      boost_multiplier: planData?.boost_multiplier || 2,
-      features: [...(planData?.features || [])],
-      is_active: true
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const calculatedStats = useMemo(() => {
+    const activeSubscriptions = subscriptions.filter((item) => {
+      const status = String(item?.status || "").toLowerCase();
+      return (
+        item?.is_active === true ||
+        status === "active" ||
+        status === "premium"
+      );
     });
+
+    const revenueFromSubscriptions = subscriptions.reduce((total, item) => {
+      return total + Number(item?.amount || item?.price || 0);
+    }, 0);
+
+    return {
+      users:
+        stats?.premium_users ??
+        stats?.premiumUsers ??
+        stats?.total_premium_users ??
+        activeSubscriptions.length,
+
+      revenue:
+        stats?.total_revenue ??
+        stats?.totalRevenue ??
+        stats?.revenue ??
+        revenueFromSubscriptions,
+
+      active:
+        stats?.active_subscriptions ??
+        stats?.activeSubscriptions ??
+        activeSubscriptions.length,
+
+      expiring:
+        stats?.expiring_soon ??
+        stats?.expiringSoon ??
+        0,
+    };
+  }, [stats, subscriptions]);
+
+  const openEditModal = (plan) => {
+    const key = getPlanKey(plan);
+
+    setEditingPlan(plan);
+
+    setPlanForm({
+      plan_key: key,
+      name: plan?.name || "",
+      price: Number(plan?.price || 0),
+      duration_days: Number(plan?.duration_days || 30),
+      boost_multiplier: Number(plan?.boost_multiplier || 2),
+      features: Array.isArray(plan?.features) ? [...plan.features] : [],
+      is_active:
+        plan?.is_active === undefined ? true : Boolean(plan.is_active),
+    });
+
+    setFeatureInput("");
+    setShowEditModal(true);
   };
 
-  // FIXED: This now reloads data from database after save
-  const handleSavePlan = async () => {
+  const closeEditModal = () => {
+    if (saving) return;
+
+    setShowEditModal(false);
+    setEditingPlan(null);
+    setFeatureInput("");
+  };
+
+  const handlePlanFormChange = (field, value) => {
+    setPlanForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const addFeature = () => {
+    const feature = featureInput.trim();
+
+    if (!feature) return;
+
+    setPlanForm((previous) => ({
+      ...previous,
+      features: [...previous.features, feature],
+    }));
+
+    setFeatureInput("");
+  };
+
+  const removeFeature = (index) => {
+    setPlanForm((previous) => ({
+      ...previous,
+      features: previous.features.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleFeatureKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addFeature();
+    }
+  };
+
+  const savePlan = async (event) => {
+    event.preventDefault();
+
     if (!editingPlan) return;
-    
-    setSaving(true);
-    
+
+    const key = getPlanKey(editingPlan);
+
+    if (!planForm.name.trim()) {
+      window.alert("Please enter a plan name.");
+      return;
+    }
+
+    if (Number(planForm.price) < 0) {
+      window.alert("Price cannot be negative.");
+      return;
+    }
+
+    if (Number(planForm.duration_days) <= 0) {
+      window.alert("Duration must be greater than 0.");
+      return;
+    }
+
+    if (Number(planForm.boost_multiplier) < 1) {
+      window.alert("Boost multiplier must be at least 1.");
+      return;
+    }
+
     try {
-      // Save to backend
-      await adminService.updatePremiumPlan(editingPlan, {
-        name: editForm.name,
-        price: editForm.price || 0,
-        duration_days: editForm.duration_days || 30,
-        boost_multiplier: editForm.boost_multiplier || 2,
-        features: editForm.features || [],
-        is_active: true
+      setSaving(true);
+
+      await adminService.updatePremiumPlan(key, {
+        name: planForm.name.trim(),
+        price: Number(planForm.price),
+        duration_days: Number(planForm.duration_days),
+        boost_multiplier: Number(planForm.boost_multiplier),
+        features: planForm.features,
+        is_active: Boolean(planForm.is_active),
       });
-      
-      // IMPORTANT: Reload all data from database to get fresh values
-      await loadPremiumData();
-      
-      toast.success(`${editForm.name || editingPlan} plan updated successfully`);
-      setEditingPlan(null);
-      setNewFeature('');
-      
+
+      window.alert("Premium plan updated successfully.");
+
+      closeEditModal();
+      await loadData();
     } catch (error) {
-      console.error('Update error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to update plan');
+      console.error("Update premium plan error:", error);
+
+      window.alert(
+        `Failed to update Premium plan.\n\n${getErrorMessage(error)}`
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const handleCreatePlan = async () => {
-    if (!newPlanForm.plan_key || !newPlanForm.name || !newPlanForm.price) {
-      toast.error('Please fill all required fields');
+  const openCreateModal = () => {
+    setPlanForm({
+      ...emptyPlan,
+      features: [],
+    });
+
+    setCreateFeatureInput("");
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    if (saving) return;
+
+    setShowCreateModal(false);
+    setCreateFeatureInput("");
+  };
+
+  const addCreateFeature = () => {
+    const feature = createFeatureInput.trim();
+
+    if (!feature) return;
+
+    setPlanForm((previous) => ({
+      ...previous,
+      features: [...previous.features, feature],
+    }));
+
+    setCreateFeatureInput("");
+  };
+
+  const handleCreateFeatureKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addCreateFeature();
+    }
+  };
+
+  const createPlan = async (event) => {
+    event.preventDefault();
+
+    const key = planForm.plan_key.trim().toLowerCase();
+
+    if (!key) {
+      window.alert("Please enter a plan key.");
       return;
     }
-    
+
+    if (!/^[a-z0-9_-]+$/.test(key)) {
+      window.alert(
+        "Plan key can only contain lowercase letters, numbers, underscores and hyphens."
+      );
+      return;
+    }
+
+    if (!planForm.name.trim()) {
+      window.alert("Please enter a plan name.");
+      return;
+    }
+
+    if (Number(planForm.price) < 0) {
+      window.alert("Price cannot be negative.");
+      return;
+    }
+
+    if (Number(planForm.duration_days) <= 0) {
+      window.alert("Duration must be greater than 0.");
+      return;
+    }
+
+    if (Number(planForm.boost_multiplier) < 1) {
+      window.alert("Boost multiplier must be at least 1.");
+      return;
+    }
+
     try {
-      const featuresArray = newPlanForm.features.split(',').map(f => f.trim()).filter(f => f);
-      
+      setSaving(true);
+
       await adminService.createPremiumPlan({
-        plan_key: newPlanForm.plan_key.toLowerCase(),
-        name: newPlanForm.name,
-        price: newPlanForm.price || 0,
-        duration_days: newPlanForm.duration_days || 30,
-        boost_multiplier: newPlanForm.boost_multiplier || 2,
-        features: featuresArray,
-        is_active: true
+        plan_key: key,
+        name: planForm.name.trim(),
+        price: Number(planForm.price),
+        duration_days: Number(planForm.duration_days),
+        boost_multiplier: Number(planForm.boost_multiplier),
+        features: planForm.features,
+        is_active: Boolean(planForm.is_active),
       });
-      
-      toast.success(`${newPlanForm.name} plan created successfully`);
-      setShowAddModal(false);
-      setNewPlanForm({
-        plan_key: '',
-        name: '',
-        price: 5000,
-        duration_days: 30,
-        boost_multiplier: 2,
-        features: ''
-      });
-      await loadPremiumData();
+
+      window.alert("Premium plan created successfully.");
+
+      closeCreateModal();
+      await loadData();
     } catch (error) {
-      console.error('Create plan error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to create plan');
+      console.error("Create premium plan error:", error);
+
+      window.alert(
+        `Failed to create Premium plan.\n\n${getErrorMessage(error)}`
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleAddFeature = () => {
-    if (newFeature.trim()) {
-      setEditForm({
-        ...editForm,
-        features: [...editForm.features, newFeature.trim()]
-      });
-      setNewFeature('');
-    }
-  };
+  const deletePlan = async (plan) => {
+    const key = getPlanKey(plan);
 
-  const handleRemoveFeature = (index) => {
-    const newFeatures = [...editForm.features];
-    newFeatures.splice(index, 1);
-    setEditForm({ ...editForm, features: newFeatures });
-  };
+    if (!key) return;
 
-  const handleCreatePromo = async () => {
-    if (!promoCode.code) {
-      toast.error('Please enter a promo code');
+    if (BUILT_IN_PLANS.includes(key.toLowerCase())) {
+      window.alert(
+        "Basic, Standard and Pro are built-in Premium plans and cannot be deleted."
+      );
       return;
     }
-    try {
-      await adminService.createPromoCode(promoCode);
-      toast.success('Promo code created successfully');
-      setShowPromoModal(false);
-      setPromoCode({ code: '', discount_percent: 10, valid_until: '', plan: 'all' });
-    } catch (error) {
-      toast.error('Failed to create promo code');
-    }
-  };
 
-  const formatPrice = (price) => {
-    if (!price && price !== 0) return '₦0';
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const getPlanIcon = (planKey) => {
-    switch(planKey) {
-      case 'basic': return <Zap className="h-5 w-5" />;
-      case 'standard': return <Rocket className="h-5 w-5" />;
-      case 'pro': return <Gem className="h-5 w-5" />;
-      default: return <Crown className="h-5 w-5" />;
-    }
-  };
-
-  const getPlanColor = (planKey) => {
-    switch(planKey) {
-      case 'basic': return 'from-blue-500 to-blue-600';
-      case 'standard': return 'from-purple-500 to-purple-600';
-      case 'pro': return 'from-yellow-500 to-orange-500';
-      default: return 'from-brand-orange to-orange-600';
-    }
-  };
-
-  const statCards = [
-    { 
-      title: 'Total Premium Users', 
-      value: stats.totalPremiumUsers || 0, 
-      icon: Crown, 
-      color: 'bg-yellow-500',
-      change: '+12%'
-    },
-    { 
-      title: 'Total Revenue', 
-      value: formatPrice(stats.totalRevenue || 0), 
-      icon: DollarSign, 
-      color: 'bg-green-500',
-      change: '+23%'
-    },
-    { 
-      title: 'Active Subscriptions', 
-      value: stats.activeSubscriptions || 0, 
-      icon: Users, 
-      color: 'bg-blue-500',
-      change: '+8%'
-    },
-    { 
-      title: 'Expiring Soon', 
-      value: stats.expiringSoon || 0, 
-      icon: Calendar, 
-      color: 'bg-red-500',
-      change: '-5%'
-    },
-  ];
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-orange"></div>
-      </div>
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the "${plan?.name || key}" Premium plan?`
     );
-  }
+
+    if (!confirmed) return;
+
+    try {
+      setSaving(true);
+
+      await adminService.deletePremiumPlan(key);
+
+      window.alert("Premium plan deleted successfully.");
+
+      await loadData();
+    } catch (error) {
+      console.error("Delete premium plan error:", error);
+
+      window.alert(
+        `Failed to delete Premium plan.\n\n${getErrorMessage(error)}`
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deactivateSubscription = async (subscription) => {
+    const id =
+      subscription?.id ||
+      subscription?.subscription_id ||
+      subscription?.subscriptionId;
+
+    if (!id) {
+      window.alert("Subscription ID was not found.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to deactivate this Premium subscription?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setSaving(true);
+
+      await adminService.deactivatePremium(id);
+
+      window.alert("Premium subscription deactivated.");
+
+      await loadData();
+    } catch (error) {
+      console.error("Deactivate subscription error:", error);
+
+      window.alert(
+        `Failed to deactivate subscription.\n\n${getErrorMessage(error)}`
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderFeatures = (features) => {
+    if (!Array.isArray(features) || features.length === 0) {
+      return (
+        <span className="text-sm text-gray-400">
+          No features added
+        </span>
+      );
+    }
+
+    return (
+      <ul className="mt-4 space-y-2">
+        {features.map((feature, index) => (
+          <li
+            key={`${feature}-${index}`}
+            className="flex items-start gap-2 text-sm text-gray-600"
+          >
+            <Check
+              size={16}
+              className="mt-0.5 shrink-0 text-green-600"
+            />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Premium Management</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage premium plans, pricing, and subscriptions</p>
-        </div>
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-100">
+                <Crown className="text-yellow-600" size={28} />
+              </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {statCards.map((stat, index) => (
-            <div key={index} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
-                  <p className={`text-sm mt-2 ${stat.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                    {stat.change} from last month
-                  </p>
-                </div>
-                <div className={`${stat.color} p-3 rounded-xl`}>
-                  <stat.icon className="h-6 w-6 text-white" />
-                </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+                  Premium Management
+                </h1>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Manage Premium plans, subscriptions and pricing.
+                </p>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex space-x-3">
+          <div className="flex gap-2">
             <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-brand-orange text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-orange-600 transition"
+              type="button"
+              onClick={loadData}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Plus className="h-5 w-5" />
-              <span>Add New Plan</span>
+              <RefreshCw
+                size={17}
+                className={loading ? "animate-spin" : ""}
+              />
+              Refresh
             </button>
+
             <button
-              onClick={() => setShowPromoModal(true)}
-              className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
             >
-              <Tag className="h-5 w-5" />
-              <span>Create Promo Code</span>
+              <Plus size={18} />
+              Create Plan
             </button>
           </div>
-          <button onClick={loadPremiumData} className="text-gray-500 hover:text-gray-700">
-            <RefreshCw className="h-5 w-5" />
+        </div>
+
+        {/* Statistics */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="Premium Users"
+            value={calculatedStats.users}
+            icon={<Users size={23} />}
+          />
+
+          <StatCard
+            title="Total Revenue"
+            value={formatMoney(calculatedStats.revenue)}
+            icon={<DollarSign size={23} />}
+          />
+
+          <StatCard
+            title="Active Subscriptions"
+            value={calculatedStats.active}
+            icon={<CreditCard size={23} />}
+          />
+
+          <StatCard
+            title="Expiring Soon"
+            value={calculatedStats.expiring}
+            icon={<Clock size={23} />}
+          />
+        </div>
+
+        {/* Boost information */}
+        <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
+          <div className="flex gap-3">
+            <div className="mt-0.5">
+              <Zap className="text-blue-600" size={22} />
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-blue-900">
+                Boost Multiplier
+              </h2>
+
+              <p className="mt-1 text-sm leading-6 text-blue-800">
+                The boost multiplier is the visibility factor assigned to a
+                Premium plan. For example, a value of <strong>2x</strong>{" "}
+                means the plan has a 2x boost value compared with the
+                normal baseline. Your listing/search ranking logic must
+                actually read this value for it to affect visibility.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-6 flex overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <button
+            type="button"
+            onClick={() => setActiveTab("plans")}
+            className={`flex-1 px-5 py-3 text-sm font-semibold transition ${
+              activeTab === "plans"
+                ? "bg-orange-500 text-white"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Premium Plans
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("subscriptions")}
+            className={`flex-1 px-5 py-3 text-sm font-semibold transition ${
+              activeTab === "subscriptions"
+                ? "bg-orange-500 text-white"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Subscriptions
           </button>
         </div>
 
-        {/* Premium Plans Management */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Premium Plans</h2>
-          </div>
-          
-          <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {Object.entries(plans).map(([planKey, planData]) => (
-                <div key={planKey} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                  {/* Plan Header */}
-                  <div className={`bg-gradient-to-r ${getPlanColor(planKey)} p-4 text-white`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        {getPlanIcon(planKey)}
-                        <h3 className="text-xl font-bold capitalize">{planData?.name || planKey}</h3>
-                      </div>
-                      {editingPlan !== planKey && (
-                        <button
-                          onClick={() => handleEditPlan(planKey, planData)}
-                          className="p-1 hover:bg-white/20 rounded-lg transition"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Plan Content */}
-                  <div className="p-4">
-                    {editingPlan === planKey ? (
-                      // Edit Mode
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Plan Name
-                          </label>
-                          <input
-                            type="text"
-                            value={editForm.name || ''}
-                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Price (₦)
-                          </label>
-                          <input
-                            type="number"
-                            value={editForm.price || 0}
-                            onChange={(e) => setEditForm({ ...editForm, price: parseInt(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Duration (days)
-                          </label>
-                          <input
-                            type="number"
-                            value={editForm.duration_days || 30}
-                            onChange={(e) => setEditForm({ ...editForm, duration_days: parseInt(e.target.value) || 30 })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            View Boost Multiplier
-                          </label>
-                          <input
-                            type="number"
-                            value={editForm.boost_multiplier || 2}
-                            onChange={(e) => setEditForm({ ...editForm, boost_multiplier: parseInt(e.target.value) || 2 })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Features
-                          </label>
-                          <div className="space-y-2 mb-2">
-                            {editForm.features?.map((feature, idx) => (
-                              <div key={idx} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded-lg">
-                                <span className="text-sm">{feature}</span>
-                                <button
-                                  onClick={() => handleRemoveFeature(idx)}
-                                  className="text-red-500 hover:text-red-600"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex space-x-2">
-                            <input
-                              type="text"
-                              value={newFeature}
-                              onChange={(e) => setNewFeature(e.target.value)}
-                              placeholder="Add new feature"
-                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                              onKeyPress={(e) => e.key === 'Enter' && handleAddFeature()}
-                            />
-                            <button
-                              onClick={handleAddFeature}
-                              className="px-4 py-2 bg-brand-orange text-white rounded-lg hover:bg-orange-600 transition"
-                            >
-                              Add
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="flex space-x-3 pt-4">
-                          <button
-                            onClick={handleSavePlan}
-                            disabled={saving}
-                            className="flex-1 bg-brand-orange text-white py-2 rounded-lg font-semibold hover:bg-orange-600 transition flex items-center justify-center space-x-2 disabled:opacity-50"
-                          >
-                            {saving ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Save className="h-4 w-4" />
-                            )}
-                            <span>{saving ? 'Saving...' : 'Save Changes'}</span>
-                          </button>
-                          <button
-                            onClick={() => setEditingPlan(null)}
-                            className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      // View Mode
-                      <>
-                        <div className="mb-4">
-                          <p className="text-3xl font-bold text-brand-orange">
-                            {formatPrice(planData?.price || 0)}
-                          </p>
-                          <p className="text-sm text-gray-500">for {planData?.duration_days || 0} days</p>
-                        </div>
-                        
-                        <div className="mb-4">
-                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Features:
-                          </p>
-                          <ul className="space-y-1">
-                            {(planData?.features || []).slice(0, 4).map((feature, idx) => (
-                              <li key={idx} className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                                <Check className="h-3 w-3 text-green-500" />
-                                <span>{feature}</span>
-                              </li>
-                            ))}
-                            {(planData?.features?.length || 0) > 4 && (
-                              <li className="text-xs text-gray-500">
-                                +{(planData?.features?.length || 0) - 4} more features
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                        
-                        <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Daily price:</span>
-                            <span className="font-semibold">
-                              {formatPrice(Math.ceil((planData?.price || 0) / (planData?.duration_days || 1)))}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm mt-1">
-                            <span className="text-gray-500">View boost:</span>
-                            <span className="font-semibold text-brand-orange">
-                              {planData?.boost_multiplier || 2}x
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+        {/* Loading */}
+        {loading ? (
+          <div className="flex min-h-[300px] items-center justify-center rounded-xl border border-gray-200 bg-white">
+            <div className="text-center">
+              <RefreshCw
+                size={32}
+                className="mx-auto animate-spin text-orange-500"
+              />
+              <p className="mt-3 text-sm text-gray-500">
+                Loading Premium data...
+              </p>
             </div>
           </div>
-        </div>
+        ) : activeTab === "plans" ? (
+          <>
+            {/* Plans */}
+            {plans.length === 0 ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
+                <Crown
+                  size={42}
+                  className="mx-auto text-gray-300"
+                />
 
-        {/* Active Subscriptions Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Active Subscriptions</h2>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">User</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Plan</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Started</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Expires</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Status</th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subscriptions.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-8 text-gray-500">
-                      No active subscriptions found
-                    </td>
-                  </tr>
-                ) : (
-                  subscriptions.map((sub) => (
-                    <tr key={sub.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="py-3 px-6">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-brand-orange to-orange-400 flex items-center justify-center text-white text-sm">
-                            {sub.user_name?.[0] || 'U'}
+                <h3 className="mt-4 text-lg font-semibold text-gray-800">
+                  No Premium plans found
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Create your first Premium plan.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={openCreateModal}
+                  className="mt-5 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
+                >
+                  Create Plan
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {plans.map((plan) => {
+                  const key = getPlanKey(plan);
+                  const isBuiltIn = BUILT_IN_PLANS.includes(
+                    key.toLowerCase()
+                  );
+
+                  return (
+                    <div
+                      key={key}
+                      className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                    >
+                      <div className="border-b border-gray-100 bg-gradient-to-r from-orange-50 to-yellow-50 p-6">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="mb-2 flex items-center gap-2">
+                              <Crown
+                                size={18}
+                                className="text-orange-500"
+                              />
+
+                              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                {key}
+                              </span>
+                            </div>
+
+                            <h2 className="text-xl font-bold text-gray-900">
+                              {plan?.name || key}
+                            </h2>
                           </div>
-                          <span className="text-sm text-gray-900 dark:text-white">{sub.user_name}</span>
+
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              plan?.is_active === false
+                                ? "bg-red-100 text-red-700"
+                                : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {plan?.is_active === false
+                              ? "Inactive"
+                              : "Active"}
+                          </span>
                         </div>
-                      </td>
-                      <td className="py-3 px-6">
-                        <span className={`inline-flex items-center space-x-1 px-2 py-1 text-xs rounded-full capitalize ${
-                          sub.plan === 'pro' ? 'bg-yellow-100 text-yellow-700' :
-                          sub.plan === 'standard' ? 'bg-purple-100 text-purple-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {getPlanIcon(sub.plan)}
-                          <span>{sub.plan}</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-6 text-sm text-gray-600 dark:text-gray-400">
-                        {sub.started_at ? new Date(sub.started_at).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="py-3 px-6 text-sm text-gray-600 dark:text-gray-400">
-                        {sub.expires_at ? new Date(sub.expires_at).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="py-3 px-6">
-                        <span className="inline-flex items-center space-x-1 px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
-                          <Check className="h-3 w-3" />
-                          <span>Active</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-6">
-                        <button className="text-red-500 hover:text-red-600 text-sm">
-                          Cancel
-                        </button>
-                      </td>
+
+                        <div className="mt-5">
+                          <span className="text-3xl font-bold text-gray-900">
+                            {formatMoney(plan?.price)}
+                          </span>
+
+                          <span className="ml-2 text-sm text-gray-500">
+                            / {plan?.duration_days || 0} days
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-6">
+                        <div className="mb-4 grid grid-cols-2 gap-3">
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="text-xs text-gray-500">
+                              Duration
+                            </p>
+
+                            <p className="mt-1 font-semibold text-gray-900">
+                              {plan?.duration_days || 0} days
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="text-xs text-gray-500">
+                              Boost
+                            </p>
+
+                            <p className="mt-1 font-semibold text-orange-600">
+                              {Number(
+                                plan?.boost_multiplier || 1
+                              ).toLocaleString()}
+                              x
+                            </p>
+                          </div>
+                        </div>
+
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Features
+                        </h3>
+
+                        {renderFeatures(plan?.features)}
+
+                        <div className="mt-6 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(plan)}
+                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+                          >
+                            <Pencil size={16} />
+                            Edit
+                          </button>
+
+                          {!isBuiltIn && (
+                            <button
+                              type="button"
+                              onClick={() => deletePlan(plan)}
+                              className="inline-flex items-center justify-center rounded-lg border border-red-200 px-3 py-2.5 text-red-600 hover:bg-red-50"
+                              title="Delete plan"
+                            >
+                              <Trash2 size={17} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          /* Subscriptions */
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div className="border-b border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-900">
+                Premium Subscriptions
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Manage active Premium subscriptions.
+              </p>
+            </div>
+
+            {subscriptions.length === 0 ? (
+              <div className="p-10 text-center text-sm text-gray-500">
+                No Premium subscriptions found.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        User
+                      </th>
+
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Plan
+                      </th>
+
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Amount
+                      </th>
+
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Status
+                      </th>
+
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Expiry
+                      </th>
+
+                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Action
+                      </th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  </thead>
+
+                  <tbody className="divide-y divide-gray-100">
+                    {subscriptions.map((subscription, index) => {
+                      const id =
+                        subscription?.id ||
+                        subscription?.subscription_id ||
+                        subscription?.subscriptionId ||
+                        index;
+
+                      const userName =
+                        subscription?.user_name ||
+                        subscription?.username ||
+                        subscription?.name ||
+                        subscription?.email ||
+                        "Unknown user";
+
+                      const planName =
+                        subscription?.plan_name ||
+                        subscription?.plan ||
+                        subscription?.plan_key ||
+                        "Premium";
+
+                      const status =
+                        subscription?.status ||
+                        (subscription?.is_active
+                          ? "active"
+                          : "inactive");
+
+                      const expiry =
+                        subscription?.expires_at ||
+                        subscription?.expiry_date ||
+                        subscription?.end_date ||
+                        subscription?.expires ||
+                        "-";
+
+                      return (
+                        <tr
+                          key={id}
+                          className="hover:bg-gray-50"
+                        >
+                          <td className="px-5 py-4">
+                            <div className="font-medium text-gray-900">
+                              {userName}
+                            </div>
+
+                            {subscription?.email &&
+                              subscription.email !== userName && (
+                                <div className="mt-0.5 text-xs text-gray-500">
+                                  {subscription.email}
+                                </div>
+                              )}
+                          </td>
+
+                          <td className="px-5 py-4 text-sm text-gray-700">
+                            {planName}
+                          </td>
+
+                          <td className="px-5 py-4 text-sm font-medium text-gray-900">
+                            {formatMoney(
+                              subscription?.amount ||
+                                subscription?.price ||
+                                0
+                            )}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                String(status).toLowerCase() ===
+                                  "active" ||
+                                subscription?.is_active === true
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {String(status)}
+                            </span>
+                          </td>
+
+                          <td className="px-5 py-4 text-sm text-gray-600">
+                            {expiry !== "-"
+                              ? new Date(expiry).toLocaleDateString(
+                                  "en-NG"
+                                )
+                              : "-"}
+                          </td>
+
+                          <td className="px-5 py-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                deactivateSubscription(
+                                  subscription
+                                )
+                              }
+                              disabled={saving}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              <PowerOff size={14} />
+                              Deactivate
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Add Plan Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add New Premium Plan</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-700">
-                <X className="h-5 w-5" />
+      {/* EDIT PLAN MODAL */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Edit Premium Plan
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Update the Premium plan settings.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditModal}
+                disabled={saving}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              >
+                <X size={21} />
               </button>
             </div>
-            <div className="space-y-4">
+
+            <form
+              onSubmit={savePlan}
+              className="space-y-5 p-6"
+            >
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Plan Key *
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Plan Key
                 </label>
+
                 <input
-                  type="text"
-                  value={newPlanForm.plan_key}
-                  onChange={(e) => setNewPlanForm({ ...newPlanForm, plan_key: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  placeholder="e.g., enterprise"
+                  value={planForm.plan_key}
+                  disabled
+                  className="w-full rounded-lg border border-gray-300 bg-gray-100 px-4 py-3 text-sm text-gray-500"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Plan Name *
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Plan Name
                 </label>
+
                 <input
-                  type="text"
-                  value={newPlanForm.name}
-                  onChange={(e) => setNewPlanForm({ ...newPlanForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  placeholder="e.g., Enterprise"
+                  value={planForm.name}
+                  onChange={(event) =>
+                    handlePlanFormChange(
+                      "name",
+                      event.target.value
+                    )
+                  }
+                  placeholder="e.g. Premium Pro"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Price (₦) *
-                </label>
-                <input
-                  type="number"
-                  value={newPlanForm.price}
-                  onChange={(e) => setNewPlanForm({ ...newPlanForm, price: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  placeholder="50000"
-                />
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    Price (₦)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={planForm.price}
+                    onChange={(event) =>
+                      handlePlanFormChange(
+                        "price",
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    Duration
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={planForm.duration_days}
+                    onChange={(event) =>
+                      handlePlanFormChange(
+                        "duration_days",
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Days
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    Boost Multiplier
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.1"
+                    value={planForm.boost_multiplier}
+                    onChange={(event) =>
+                      handlePlanFormChange(
+                        "boost_multiplier",
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+
+                  <p className="mt-1 text-xs text-gray-400">
+                    Example: 2 = 2x
+                  </p>
+                </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Duration (days) *
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Features
                 </label>
-                <input
-                  type="number"
-                  value={newPlanForm.duration_days}
-                  onChange={(e) => setNewPlanForm({ ...newPlanForm, duration_days: parseInt(e.target.value) || 30 })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  placeholder="365"
-                />
+
+                <div className="flex gap-2">
+                  <input
+                    value={featureInput}
+                    onChange={(event) =>
+                      setFeatureInput(event.target.value)
+                    }
+                    onKeyDown={handleFeatureKeyDown}
+                    placeholder="Type a feature and press Enter"
+                    className="min-w-0 flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={addFeature}
+                    className="rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-gray-800"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {planForm.features.map((feature, index) => (
+                    <div
+                      key={`${feature}-${index}`}
+                      className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
+                    >
+                      <span className="text-sm text-gray-700">
+                        {feature}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => removeFeature(index)}
+                        className="rounded-md p-1.5 text-red-500 hover:bg-red-50"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Boost Multiplier
-                </label>
+
+              <label className="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    Plan Active
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    Allow customers to use this plan.
+                  </p>
+                </div>
+
                 <input
-                  type="number"
-                  value={newPlanForm.boost_multiplier}
-                  onChange={(e) => setNewPlanForm({ ...newPlanForm, boost_multiplier: parseInt(e.target.value) || 2 })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  placeholder="10"
+                  type="checkbox"
+                  checked={Boolean(planForm.is_active)}
+                  onChange={(event) =>
+                    handlePlanFormChange(
+                      "is_active",
+                      event.target.checked
+                    )
+                  }
+                  className="h-5 w-5 accent-orange-500"
                 />
+              </label>
+
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  disabled={saving}
+                  className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? (
+                    <RefreshCw
+                      size={17}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <Check size={17} />
+                  )}
+
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Features (comma separated)
-                </label>
-                <input
-                  type="text"
-                  value={newPlanForm.features}
-                  onChange={(e) => setNewPlanForm({ ...newPlanForm, features: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  placeholder="Feature 1, Feature 2, Feature 3"
-                />
-              </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                Cancel
-              </button>
-              <button onClick={handleCreatePlan} className="flex-1 bg-brand-orange text-white py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
-                Create Plan
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Promo Code Modal */}
-      {showPromoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create Promo Code</h2>
-              <button onClick={() => setShowPromoModal(false)} className="text-gray-500 hover:text-gray-700">
-                <X className="h-5 w-5" />
+      {/* CREATE PLAN MODAL */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Create Premium Plan
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Add a new Premium subscription plan.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCreateModal}
+                disabled={saving}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              >
+                <X size={21} />
               </button>
             </div>
-            <div className="space-y-4">
+
+            <form
+              onSubmit={createPlan}
+              className="space-y-5 p-6"
+            >
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Promo Code
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Plan Key
                 </label>
+
                 <input
-                  type="text"
-                  value={promoCode.code}
-                  onChange={(e) => setPromoCode({ ...promoCode, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  placeholder="PREMIUM20"
+                  value={planForm.plan_key}
+                  onChange={(event) =>
+                    handlePlanFormChange(
+                      "plan_key",
+                      event.target.value
+                    )
+                  }
+                  placeholder="e.g. gold"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                />
+
+                <p className="mt-1 text-xs text-gray-400">
+                  Use lowercase letters, numbers, - or _.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Plan Name
+                </label>
+
+                <input
+                  value={planForm.name}
+                  onChange={(event) =>
+                    handlePlanFormChange(
+                      "name",
+                      event.target.value
+                    )
+                  }
+                  placeholder="e.g. Gold Premium"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Discount (%)
-                </label>
-                <input
-                  type="number"
-                  value={promoCode.discount_percent}
-                  onChange={(e) => setPromoCode({ ...promoCode, discount_percent: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  placeholder="10"
-                />
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    Price (₦)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={planForm.price}
+                    onChange={(event) =>
+                      handlePlanFormChange(
+                        "price",
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    Duration
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={planForm.duration_days}
+                    onChange={(event) =>
+                      handlePlanFormChange(
+                        "duration_days",
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">
+                    Boost Multiplier
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.1"
+                    value={planForm.boost_multiplier}
+                    onChange={(event) =>
+                      handlePlanFormChange(
+                        "boost_multiplier",
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Valid Until
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Features
                 </label>
-                <input
-                  type="date"
-                  value={promoCode.valid_until}
-                  onChange={(e) => setPromoCode({ ...promoCode, valid_until: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                />
+
+                <div className="flex gap-2">
+                  <input
+                    value={createFeatureInput}
+                    onChange={(event) =>
+                      setCreateFeatureInput(event.target.value)
+                    }
+                    onKeyDown={handleCreateFeatureKeyDown}
+                    placeholder="Type a feature and press Enter"
+                    className="min-w-0 flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={addCreateFeature}
+                    className="rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-gray-800"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {planForm.features.map((feature, index) => (
+                    <div
+                      key={`${feature}-${index}`}
+                      className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
+                    >
+                      <span className="text-sm text-gray-700">
+                        {feature}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPlanForm((previous) => ({
+                            ...previous,
+                            features: previous.features.filter(
+                              (_, i) => i !== index
+                            ),
+                          }))
+                        }
+                        className="rounded-md p-1.5 text-red-500 hover:bg-red-50"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Applicable Plan
-                </label>
-                <select
-                  value={promoCode.plan}
-                  onChange={(e) => setPromoCode({ ...promoCode, plan: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange"
+
+              <label className="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    Plan Active
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    Make this plan available to customers.
+                  </p>
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={Boolean(planForm.is_active)}
+                  onChange={(event) =>
+                    handlePlanFormChange(
+                      "is_active",
+                      event.target.checked
+                    )
+                  }
+                  className="h-5 w-5 accent-orange-500"
+                />
+              </label>
+
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
+                <button
+                  type="button"
+                  onClick={closeCreateModal}
+                  disabled={saving}
+                  className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
-                  <option value="all">All Plans</option>
-                  <option value="basic">Basic Only</option>
-                  <option value="standard">Standard Only</option>
-                  <option value="pro">Pro Only</option>
-                </select>
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? (
+                    <RefreshCw
+                      size={17}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <Plus size={17} />
+                  )}
+
+                  {saving ? "Creating..." : "Create Plan"}
+                </button>
               </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <button onClick={() => setShowPromoModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                Cancel
-              </button>
-              <button onClick={handleCreatePromo} className="flex-1 bg-brand-orange text-white py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
-                Create Promo
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
     </div>
   );
-};
+}
 
-export default AdminPremium;
+function StatCard({ title, value, icon }) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-500">
+            {title}
+          </p>
+
+          <p className="mt-2 text-2xl font-bold text-gray-900">
+            {value}
+          </p>
+        </div>
+
+        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -11,6 +11,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@makozi/paystack-react-pay": "^1.0.5",
+    "@paystack/inline-js": "^2.25.0",
     "@supabase/realtime-js": "^2.103.2",
     "@supabase/supabase-js": "^2.103.2",
     "autoprefixer": "^10.4.16",
@@ -27,7 +28,7 @@
     "react-hot-toast": "^2.6.0",
     "react-paystack": "^6.0.0",
     "react-phone-number-input": "^3.4.16",
-    "react-router-dom": "^6.30.3",
+    "react-router-dom": "^7.18.4",
     "tailwindcss": "^3.4.0",
     "zod": "^3.25.76",
     "zustand": "^4.5.7"
