@@ -240,7 +240,13 @@ export const adminService = {
    * tables, which is what the public GET /premium/plans endpoint
    * (and everything users actually see) reads from.
    *
-   * Do NOT use /admin/premium/* for plan CRUD or activation.
+   * Do NOT use /admin/premium/* (app/routers/admin.py) for plan
+   * CRUD or activation — that reads/writes a JSON file on disk
+   * (premium_plans.json) that the public-facing site never reads.
+   * Using it caused activated prices to silently mismatch the
+   * prices shown in the admin UI. activatePremium() below has
+   * been fixed to use the correct DB-backed route; do not point
+   * it back at /admin/premium/activate.
    */
 
   async getPremiumPlans() {
@@ -422,6 +428,21 @@ export const adminService = {
   // PREMIUM ACTIVATION
   // ------------------------------------------------------------
 
+  // FIX: now calls the DB-backed route in premium.py
+  // (POST /premium/activate/{user_id}?plan=...) instead of the
+  // JSON-file-backed /admin/premium/activate in admin.py. The old
+  // route read prices from premium_plans.json, which could silently
+  // differ from the PremiumPlan DB table shown everywhere else in
+  // the admin UI — so a user could be charged/credited a stale price
+  // that didn't match what the admin saw on screen. This route reads
+  // plan.price directly from the same PremiumPlan table used by
+  // getPremiumPlans() above, so displayed price and applied price
+  // are now guaranteed to match.
+  //
+  // Note: this endpoint takes `plan` as a query param (not a JSON
+  // body) and does not support a duration override — it always uses
+  // the plan's own duration_days, so the `duration` argument is
+  // intentionally no longer sent.
   async activatePremium(userId, plan) {
     const response = await api.post(
       `/premium/activate/${encodeURIComponent(userId)}`,
@@ -525,6 +546,8 @@ export const adminService = {
   },
 
   // Real counts across ALL products, not just the current page.
+  // Backs the stat cards on AdminProducts.jsx — see admin.py's
+  // GET /admin/products/stats.
   async getProductStats() {
     try {
       const response = await api.get(
@@ -624,27 +647,20 @@ export const adminService = {
     }
   },
 
-  async updateOrderStatus(
-    id,
-    orderStatus,
-    details = {}
-  ) {
+  async getOrder(id) {
+    const response = await api.get(`/admin/orders/${id}`);
+    return response.data;
+  },
+
+  async updateOrderStatus(id, orderStatus, details = {}) {
     const response = await api.put(
       `/admin/orders/${id}/status`,
       {
         status: orderStatus,
-        tracking_number:
-          details.tracking_number ||
-          undefined,
-        tracking_url:
-          details.tracking_url ||
-          undefined,
-        estimated_delivery:
-          details.estimated_delivery ||
-          undefined,
-        notes:
-          details.notes ||
-          undefined,
+        tracking_number: details.tracking_number || undefined,
+        tracking_url: details.tracking_url || undefined,
+        estimated_delivery: details.estimated_delivery || undefined,
+        notes: details.notes || undefined,
       }
     );
 
@@ -654,6 +670,14 @@ export const adminService = {
   async processRefund(orderId) {
     const response = await api.post(
       `/admin/orders/${orderId}/refund`
+    );
+
+    return response.data;
+  },
+
+  async verifyOrderPayment(orderId) {
+    const response = await api.post(
+      `/admin/orders/${orderId}/verify-payment`
     );
 
     return response.data;
