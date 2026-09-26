@@ -1,44 +1,71 @@
 import api from './api';
 
 export const ordersService = {
+  // ============================================================
+  // CREATE SINGLE ORDER
+  // ============================================================
   async createOrder(orderData) {
     const response = await api.post('/orders', orderData);
     return response.data;
   },
 
+  // ============================================================
+  // GET MY ORDERS
+  // Backend response:
+  // {
+  //   orders: [...],
+  //   total,
+  //   page,
+  //   limit,
+  //   total_pages
+  // }
+  // ============================================================
   async getMyOrders(params = {}) {
     try {
-      const response = await api.get('/orders/my-orders', { params });
+      const response = await api.get('/orders/my-orders', {
+        params,
+      });
 
-      // Backend returns:
-      // { orders: [...], total, page, limit, total_pages }
       return response.data?.orders || [];
     } catch (error) {
       console.error('Failed to get orders:', error);
-      return [];
+      throw error;
     }
   },
 
+  // ============================================================
+  // GET SINGLE ORDER
+  // ============================================================
   async getOrder(id) {
     try {
-      const response = await api.get(`/orders/${id}`);
+      const response = await api.get(`/orders/verify/${id}`);
       return response.data;
     } catch (error) {
       console.error('Failed to get order:', error);
-      return null;
+      throw error;
     }
   },
 
+  // ============================================================
+  // CANCEL ORDER
+  // ============================================================
   async cancelOrder(id) {
     const response = await api.post(`/orders/${id}/cancel`);
     return response.data;
   },
 
+  // ============================================================
+  // TRACK ORDER
+  // Backend tracking endpoint is POST
+  // ============================================================
   async trackOrder(id) {
-    const response = await api.get(`/orders/${id}/track`);
+    const response = await api.post(`/orders/${id}/track`);
     return response.data;
   },
 
+  // ============================================================
+  // SELLER EARNINGS
+  // ============================================================
   async getSellerEarnings() {
     try {
       const response = await api.get('/orders/earnings');
@@ -55,6 +82,11 @@ export const ordersService = {
     }
   },
 
+  // ============================================================
+  // SELLER ORDERS
+  // IMPORTANT:
+  // Backend endpoint is /seller-orders, NOT /my-sales
+  // ============================================================
   async getMySales(params = {}) {
     try {
       const response = await api.get('/orders/seller-orders', {
@@ -75,6 +107,9 @@ export const ordersService = {
     }
   },
 
+  // ============================================================
+  // UPDATE ORDER STATUS
+  // ============================================================
   async updateOrderStatus(orderId, status) {
     const response = await api.put(
       `/orders/${orderId}/status`,
@@ -84,6 +119,9 @@ export const ordersService = {
     return response.data;
   },
 
+  // ============================================================
+  // REQUEST REFUND
+  // ============================================================
   async requestRefund(orderId, reason) {
     const response = await api.post(
       `/orders/${orderId}/refund-request`,

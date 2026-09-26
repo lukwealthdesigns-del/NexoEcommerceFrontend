@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Package,
@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  ImageOff,
 } from 'lucide-react';
 import { ordersService } from '../../services/orders';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -21,47 +22,102 @@ const UserOrders = () => {
     loadOrders();
   }, []);
 
+  // ============================================================
+  // IMAGE URL HELPER
+  // Handles both full URLs and backend relative paths.
+  // ============================================================
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) {
+      return null;
+    }
+
+    if (
+      imagePath.startsWith('http://') ||
+      imagePath.startsWith('https://') ||
+      imagePath.startsWith('data:')
+    ) {
+      return imagePath;
+    }
+
+    const baseUrl = (
+      import.meta.env.VITE_API_URL ||
+      ''
+    ).replace(/\/$/, '');
+
+    if (imagePath.startsWith('/')) {
+      return baseUrl ? `${baseUrl}${imagePath}` : imagePath;
+    }
+
+    return baseUrl
+      ? `${baseUrl}/${imagePath}`
+      : `/${imagePath}`;
+  };
+
+  // ============================================================
+  // LOAD ORDERS
+  // ============================================================
   const loadOrders = async () => {
     try {
+      setLoading(true);
+
       const data = await ordersService.getMyOrders();
 
       if (Array.isArray(data)) {
         setOrders(data);
-      } else if (data && Array.isArray(data.data)) {
-        setOrders(data.data);
       } else {
         setOrders([]);
       }
     } catch (error) {
       console.error('Failed to load orders:', error);
-      toast.error('Failed to load orders');
+
+      toast.error(
+        error?.response?.data?.detail ||
+        'Failed to load orders'
+      );
+
       setOrders([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // ============================================================
+  // STATUS ICON
+  // ============================================================
   const getStatusIcon = (status) => {
     const s = (status || '').toLowerCase();
 
     switch (s) {
       case 'delivered':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return (
+          <CheckCircle className="h-4 w-4 text-green-500" />
+        );
 
       case 'shipped':
-        return <Truck className="h-5 w-5 text-blue-500" />;
+        return (
+          <Truck className="h-4 w-4 text-blue-500" />
+        );
 
       case 'processing':
-        return <Clock className="h-5 w-5 text-yellow-500" />;
+        return (
+          <Clock className="h-4 w-4 text-yellow-500" />
+        );
 
       case 'cancelled':
-        return <XCircle className="h-5 w-5 text-red-500" />;
+        return (
+          <XCircle className="h-4 w-4 text-red-500" />
+        );
 
       default:
-        return <Package className="h-5 w-5 text-gray-500" />;
+        return (
+          <Package className="h-4 w-4 text-gray-500" />
+        );
     }
   };
 
+  // ============================================================
+  // STATUS COLOR
+  // ============================================================
   const getStatusColor = (status) => {
     const s = (status || '').toLowerCase();
 
@@ -78,49 +134,73 @@ const UserOrders = () => {
       case 'cancelled':
         return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
 
+      case 'refunded':
+        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+
       default:
         return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
     }
   };
 
-  const getFilteredOrders = () => {
-    if (!Array.isArray(orders)) {
-      return [];
-    }
+  // ============================================================
+  // FILTER ORDERS
+  // ============================================================
+  const filteredOrders =
+    filter === 'all'
+      ? orders
+      : orders.filter(
+          (order) =>
+            (order?.status || '').toLowerCase() === filter
+        );
 
-    if (filter === 'all') {
-      return orders;
-    }
-
-    return orders.filter(
-      (order) =>
-        order &&
-        (order.status || '').toLowerCase() === filter.toLowerCase()
-    );
-  };
-
-  const filteredOrders = getFilteredOrders();
-
+  // ============================================================
+  // LOADING
+  // ============================================================
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-orange" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-orange" />
+          <p className="text-gray-500 dark:text-gray-400">
+            Loading your orders...
+          </p>
+        </div>
       </div>
     );
   }
 
+  // ============================================================
+  // PAGE
+  // ============================================================
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            My Orders
-          </h1>
+        {/* ======================================================
+            HEADER
+        ====================================================== */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              My Orders
+            </h1>
+
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              View and track your orders
+            </p>
+          </div>
+
+          <Link
+            to="/shop"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-brand-orange text-white hover:bg-orange-600 transition"
+          >
+            Continue Shopping
+          </Link>
         </div>
 
-        {/* Filters */}
+        {/* ======================================================
+            FILTERS
+        ====================================================== */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
             'all',
@@ -132,6 +212,7 @@ const UserOrders = () => {
           ].map((status) => (
             <button
               key={status}
+              type="button"
               onClick={() => setFilter(status)}
               className={`px-4 py-2 rounded-lg capitalize transition ${
                 filter === status
@@ -144,164 +225,211 @@ const UserOrders = () => {
           ))}
         </div>
 
-        {/* No Orders */}
+        {/* ======================================================
+            EMPTY STATE
+        ====================================================== */}
         {filteredOrders.length === 0 ? (
-          <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl">
-            <Package className="h-24 w-24 text-gray-400 mx-auto mb-4" />
+          <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+            <Package className="h-20 w-20 text-gray-400 mx-auto mb-4" />
 
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-              No orders found
+              {orders.length === 0
+                ? 'No orders found'
+                : 'No orders in this category'}
             </h2>
 
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              You haven't placed any orders yet
+              {orders.length === 0
+                ? "You haven't placed any orders yet."
+                : 'Try selecting another order status.'}
             </p>
 
-            <Link
-              to="/shop"
-              className="btn-primary inline-block"
-            >
-              Start Shopping
-            </Link>
+            {orders.length === 0 && (
+              <Link
+                to="/shop"
+                className="inline-block bg-brand-orange text-white px-6 py-3 rounded-xl hover:bg-orange-600 transition"
+              >
+                Start Shopping
+              </Link>
+            )}
           </div>
         ) : (
-          /* Orders */
-          <div className="space-y-4">
-            {filteredOrders.map((order) => (
-              <div
-                key={order.id}
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden"
-              >
+          /* ====================================================
+             ORDERS
+          ==================================================== */
+          <div className="space-y-5">
+            {filteredOrders.map((order) => {
+              const imageUrl = getImageUrl(
+                order.product_image
+              );
 
-                {/* Order Header */}
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap justify-between items-center gap-4">
+              const productTotal =
+                Number(order.total_price || 0);
 
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Order #{order.id || 'N/A'}
-                    </p>
+              return (
+                <div
+                  key={order.id}
+                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden"
+                >
+                  {/* =================================================
+                      ORDER HEADER
+                  ================================================= */}
+                  <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Placed on{' '}
-                      {formatDate(order.created_at) || 'Unknown date'}
-                    </p>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Order Number
+                        </p>
+
+                        <p className="font-semibold text-gray-900 dark:text-white break-all">
+                          #{order.order_number || order.id}
+                        </p>
+
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Placed on{' '}
+                          {order.created_at
+                            ? formatDate(order.created_at)
+                            : 'Unknown date'}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${getStatusColor(
+                            order.status
+                          )}`}
+                        >
+                          {getStatusIcon(order.status)}
+
+                          <span className="capitalize">
+                            {order.status || 'pending'}
+                          </span>
+                        </span>
+
+                        <Link
+                          to={`/dashboard/orders/${order.id}`}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-brand-orange border border-brand-orange hover:bg-brand-orange hover:text-white transition"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>View Details</span>
+                        </Link>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-4">
+                  {/* =================================================
+                      PRODUCT
+                  ================================================= */}
+                  <div className="p-5">
+                    <div className="flex flex-col sm:flex-row gap-5">
 
-                    {/* Status */}
-                    <span
-                      className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm ${getStatusColor(
-                        order.status
-                      )}`}
-                    >
-                      {getStatusIcon(order.status)}
+                      {/* Product Image */}
+                      <div className="w-full sm:w-28 h-28 flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={
+                              order.product_title ||
+                              'Product'
+                            }
+                            className="w-full h-full object-cover"
+                            onError={(event) => {
+                              event.currentTarget.style.display =
+                                'none';
 
-                      <span className="capitalize">
-                        {order.status || 'pending'}
-                      </span>
-                    </span>
+                              const fallback =
+                                event.currentTarget
+                                  .parentElement
+                                  ?.querySelector(
+                                    '[data-image-fallback]'
+                                  );
 
-                    {/* View Details */}
-                    <Link
-                      to={`/dashboard/orders/${order.id}`}
-                      className="flex items-center space-x-1 text-brand-orange hover:underline"
-                    >
-                      <Eye className="h-4 w-4" />
+                              if (fallback) {
+                                fallback.classList.remove(
+                                  'hidden'
+                                );
+                              }
+                            }}
+                          />
+                        ) : null}
 
-                      <span>View Details</span>
-                    </Link>
-
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                <div className="p-4">
-                  {order.items &&
-                  Array.isArray(order.items) &&
-                  order.items.length > 0 ? (
-                    order.items.map((item, index) => (
-                      <div
-                        key={item.id || index}
-                        className="flex items-center space-x-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-0"
-                      >
-                        <img
-                          src={item.product_image || '/placeholder.jpg'}
-                          alt={item.product_title || 'Product'}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-
-                        <div className="flex-1">
-                          <Link
-                            to={`/product/${item.product_id}`}
-                            className="font-semibold text-gray-900 dark:text-white hover:text-brand-orange"
-                          >
-                            {item.product_title || 'Product'}
-                          </Link>
-
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Qty: {item.quantity}
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(item.price || 0)}
-                          </p>
-
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Total:{' '}
-                            {formatCurrency(
-                              Number(item.price || 0) *
-                                Number(item.quantity || 0)
-                            )}
-                          </p>
+                        <div
+                          data-image-fallback
+                          className={`${
+                            imageUrl ? 'hidden' : 'flex'
+                          } items-center justify-center`}
+                        >
+                          <ImageOff className="h-10 w-10 text-gray-400" />
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400 py-4 text-center">
-                      No items found
-                    </p>
-                  )}
-                </div>
 
-                {/* Order Footer */}
-                <div className="p-4 bg-gray-50 dark:bg-gray-900/50 flex flex-wrap justify-between items-center gap-4">
+                      {/* Product Information */}
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          to={`/product/${order.product_id || ''}`}
+                          className="block text-lg font-semibold text-gray-900 dark:text-white hover:text-brand-orange transition"
+                        >
+                          {order.product_title ||
+                            'Product'}
+                        </Link>
 
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Total Items:{' '}
-                      {order.total_items ||
-                        (Array.isArray(order.items)
-                          ? order.items.length
-                          : 0)}
-                    </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          Quantity:{' '}
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
+                            {order.quantity || 0}
+                          </span>
+                        </p>
 
-                    {order.tracking_number && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Tracking: {order.tracking_number}
-                      </p>
-                    )}
+                        {order.tracking_number && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Tracking:{' '}
+                            <span className="font-medium text-gray-700 dark:text-gray-300">
+                              {order.tracking_number}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Price */}
+                      <div className="sm:text-right">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Order Total
+                        </p>
+
+                        <p className="text-2xl font-bold text-brand-orange mt-1">
+                          {formatCurrency(productTotal)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Order Total
-                    </p>
+                  {/* =================================================
+                      FOOTER
+                  ================================================= */}
+                  <div className="px-5 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
 
-                    <p className="text-2xl font-bold text-brand-orange">
-                      {formatCurrency(
-                        order.total_amount ||
-                          order.total_price ||
-                          0
-                      )}
-                    </p>
+                      <div className="text-gray-500 dark:text-gray-400">
+                        <span>
+                          Quantity:{' '}
+                          <strong className="text-gray-700 dark:text-gray-300">
+                            {order.quantity || 0}
+                          </strong>
+                        </span>
+                      </div>
+
+                      <Link
+                        to={`/dashboard/orders/${order.id}`}
+                        className="text-brand-orange font-medium hover:underline"
+                      >
+                        View order details →
+                      </Link>
+                    </div>
                   </div>
-
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

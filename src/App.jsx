@@ -1,15 +1,19 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+
 import { useThemeStore } from './store/themeStore';
 import { useAuthStore } from './store/authStore';
+
 import ProtectedRoute from './components/common/ProtectedRoute';
 import RootLayout from './components/layout/RootLayout';
 import AuthLayout from './components/layout/AuthLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import UserDashboardLayout from './components/layout/UserDashboardLayout';
 
-// Public Pages
+// ==============================
+// PUBLIC PAGES
+// ==============================
 import LandingPage from './pages/public/LandingPage';
 import AboutUs from './pages/public/AboutUs';
 import ContactUs from './pages/public/ContactUs';
@@ -21,7 +25,9 @@ import CheckoutPage from './pages/public/CheckoutPage';
 import OrderConfirmation from './pages/public/OrderConfirmation';
 import PublicProfilePage from './pages/public/PublicProfilePage';
 
-// Auth Pages
+// ==============================
+// AUTH PAGES
+// ==============================
 import SignUp from './pages/auth/SignUp';
 import SignIn from './pages/auth/SignIn';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -29,7 +35,9 @@ import VerifyResetOTP from './pages/auth/VerifyResetOTP';
 import ResetPassword from './pages/auth/ResetPassword';
 import VerifyOTP from './pages/auth/VerifyOTP';
 
-// User Pages
+// ==============================
+// USER PAGES
+// ==============================
 import UserDashboard from './pages/user/UserDashboard';
 import UserListings from './pages/user/UserListings';
 import UserMessages from './pages/user/UserMessages';
@@ -43,7 +51,9 @@ import UserWishlist from './pages/user/UserWishlist';
 import UserUploadProduct from './pages/user/UserUploadProduct';
 import UserNotifications from './pages/user/UserNotifications';
 
-// Admin Pages
+// ==============================
+// ADMIN PAGES
+// ==============================
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs';
 import AdminOrders from './pages/admin/AdminOrders';
@@ -59,7 +69,9 @@ import AdminNotifications from './pages/admin/AdminNotifications';
 import SuperAdminDashboard from './pages/admin/SuperAdminDashboard';
 import SuperAdminSettings from './pages/admin/SuperAdminSettings';
 
-// Common Components
+// ==============================
+// COMMON COMPONENTS
+// ==============================
 import AIChatWidget from './components/common/AIChatWidget';
 import ScrollToTop from './components/common/ScrollToTop';
 import AdminPopup from './components/common/AdminPopup';
@@ -69,7 +81,9 @@ function App() {
   const { darkMode } = useThemeStore();
   const { fetchCurrentUser, isLoading } = useAuthStore();
 
-  // Apply dark/light theme
+  // ==========================================
+  // APPLY DARK / LIGHT THEME
+  // ==========================================
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -78,12 +92,16 @@ function App() {
     }
   }, [darkMode]);
 
-  // Check if user has an active session on app load
+  // ==========================================
+  // CHECK CURRENT AUTH SESSION
+  // ==========================================
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
 
-  // Block rendering until auth state is known
+  // ==========================================
+  // WAIT FOR AUTH STATE
+  // ==========================================
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -94,23 +112,30 @@ function App() {
 
   return (
     <>
+      {/* ==========================================
+          GLOBAL TOASTER
+      ========================================== */}
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
+
           style: {
             background: '#1A1A2E',
             color: '#FFF5EF',
             borderRadius: '12px',
             border: '1px solid #E8621A',
           },
+
           success: {
             duration: 3000,
+
             iconTheme: {
               primary: '#E8621A',
               secondary: '#FFF5EF',
             },
           },
+
           error: {
             iconTheme: {
               primary: '#ef4444',
@@ -120,113 +145,316 @@ function App() {
         }}
       />
 
+      {/* ==========================================
+          APPLICATION ROUTES
+      ========================================== */}
       <Routes>
-        {/* PUBLIC ROUTES */}
+
+        {/* ========================================
+            PUBLIC ROUTES
+        ======================================== */}
         <Route element={<RootLayout />}>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/shop" element={<ShopPage />} />
-          <Route path="/product/:id" element={<ProductDetailPage />} />
-          <Route path="/category/:category" element={<CategoryPage />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/contact" element={<ContactUs />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
+
+          <Route
+            path="/"
+            element={<LandingPage />}
+          />
+
+          <Route
+            path="/shop"
+            element={<ShopPage />}
+          />
+
+          <Route
+            path="/product/:id"
+            element={<ProductDetailPage />}
+          />
+
+          <Route
+            path="/category/:category"
+            element={<CategoryPage />}
+          />
+
+          <Route
+            path="/about"
+            element={<AboutUs />}
+          />
+
+          <Route
+            path="/contact"
+            element={<ContactUs />}
+          />
+
+          <Route
+            path="/cart"
+            element={<CartPage />}
+          />
+
+          <Route
+            path="/checkout"
+            element={<CheckoutPage />}
+          />
+
           <Route
             path="/order-confirmation/:id"
             element={<OrderConfirmation />}
           />
-          <Route path="/profile/:userId" element={<PublicProfilePage />} />
+
+          <Route
+            path="/profile/:userId"
+            element={<PublicProfilePage />}
+          />
+
         </Route>
 
-        {/* AUTH ROUTES */}
+        {/* ========================================
+            AUTH ROUTES
+        ======================================== */}
         <Route element={<AuthLayout />}>
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/verify-reset-otp" element={<VerifyResetOTP />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-otp" element={<VerifyOTP />} />
+
+          <Route
+            path="/signup"
+            element={<SignUp />}
+          />
+
+          <Route
+            path="/signin"
+            element={<SignIn />}
+          />
+
+          <Route
+            path="/forgot-password"
+            element={<ForgotPassword />}
+          />
+
+          <Route
+            path="/verify-reset-otp"
+            element={<VerifyResetOTP />}
+          />
+
+          <Route
+            path="/reset-password"
+            element={<ResetPassword />}
+          />
+
+          <Route
+            path="/verify-otp"
+            element={<VerifyOTP />}
+          />
+
         </Route>
 
-        {/* USER DASHBOARD ROUTES */}
+        {/* ========================================
+            USER DASHBOARD ROUTES
+        ======================================== */}
         <Route
           element={
-            <ProtectedRoute allowedRoles={['user', 'admin', 'super_admin']}>
+            <ProtectedRoute
+              allowedRoles={[
+                'user',
+                'admin',
+                'super_admin',
+              ]}
+            >
               <UserDashboardLayout />
             </ProtectedRoute>
           }
         >
-          <Route path="/dashboard" element={<UserDashboard />} />
-          <Route path="/dashboard/listings" element={<UserListings />} />
-          <Route path="/dashboard/upload" element={<UserUploadProduct />} />
+
+          {/* Dashboard */}
+          <Route
+            path="/dashboard"
+            element={<UserDashboard />}
+          />
+
+          {/* Listings */}
+          <Route
+            path="/dashboard/listings"
+            element={<UserListings />}
+          />
+
+          {/* Upload Product */}
+          <Route
+            path="/dashboard/upload"
+            element={<UserUploadProduct />}
+          />
+
+          {/* Notifications */}
           <Route
             path="/dashboard/notifications"
             element={<UserNotifications />}
           />
-          <Route path="/dashboard/messages" element={<UserMessages />} />
 
-          {/* Orders */}
-          <Route path="/dashboard/orders" element={<UserOrders />} />
+          {/* Messages */}
+          <Route
+            path="/dashboard/messages"
+            element={<UserMessages />}
+          />
+
+          {/* ======================================
+              ORDERS
+          ====================================== */}
+
+          {/* My Orders */}
+          <Route
+            path="/dashboard/orders"
+            element={<UserOrders />}
+          />
+
+          {/* Individual Order Details */}
           <Route
             path="/dashboard/orders/:id"
             element={<OrderDetails />}
           />
 
-          <Route path="/dashboard/premium" element={<UserPremium />} />
-          <Route path="/dashboard/profile" element={<UserProfile />} />
-          <Route path="/dashboard/sales" element={<UserSales />} />
-          <Route path="/dashboard/settings" element={<UserSettings />} />
-          <Route path="/dashboard/wishlist" element={<UserWishlist />} />
+          {/* Premium */}
+          <Route
+            path="/dashboard/premium"
+            element={<UserPremium />}
+          />
+
+          {/* Profile */}
+          <Route
+            path="/dashboard/profile"
+            element={<UserProfile />}
+          />
+
+          {/* Sales */}
+          <Route
+            path="/dashboard/sales"
+            element={<UserSales />}
+          />
+
+          {/* Settings */}
+          <Route
+            path="/dashboard/settings"
+            element={<UserSettings />}
+          />
+
+          {/* Wishlist */}
+          <Route
+            path="/dashboard/wishlist"
+            element={<UserWishlist />}
+          />
+
         </Route>
 
-        {/* ADMIN ROUTES */}
+        {/* ========================================
+            ADMIN ROUTES
+        ======================================== */}
         <Route
           element={
-            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <ProtectedRoute
+              allowedRoles={[
+                'admin',
+                'super_admin',
+              ]}
+            >
               <AdminLayout />
             </ProtectedRoute>
           }
         >
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/products" element={<AdminProducts />} />
-          <Route path="/admin/orders" element={<AdminOrders />} />
-          <Route path="/admin/reviews" element={<AdminReviews />} />
-          <Route path="/admin/premium" element={<AdminPremium />} />
-          <Route path="/admin/analytics" element={<AdminAnalytics />} />
-          <Route path="/admin/admins" element={<AdminAdmins />} />
-          <Route path="/admin/messages" element={<AdminMessages />} />
+
+          <Route
+            path="/admin"
+            element={<AdminDashboard />}
+          />
+
+          <Route
+            path="/admin/users"
+            element={<AdminUsers />}
+          />
+
+          <Route
+            path="/admin/products"
+            element={<AdminProducts />}
+          />
+
+          <Route
+            path="/admin/orders"
+            element={<AdminOrders />}
+          />
+
+          <Route
+            path="/admin/reviews"
+            element={<AdminReviews />}
+          />
+
+          <Route
+            path="/admin/premium"
+            element={<AdminPremium />}
+          />
+
+          <Route
+            path="/admin/analytics"
+            element={<AdminAnalytics />}
+          />
+
+          <Route
+            path="/admin/admins"
+            element={<AdminAdmins />}
+          />
+
+          <Route
+            path="/admin/messages"
+            element={<AdminMessages />}
+          />
+
           <Route
             path="/admin/notifications"
             element={<AdminNotifications />}
           />
-          <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
+
+          <Route
+            path="/admin/audit-logs"
+            element={<AdminAuditLogs />}
+          />
+
+          <Route
+            path="/admin/settings"
+            element={<AdminSettings />}
+          />
+
         </Route>
 
-        {/* SUPER ADMIN ROUTES */}
+        {/* ========================================
+            SUPER ADMIN ROUTES
+        ======================================== */}
         <Route
           element={
-            <ProtectedRoute allowedRoles={['super_admin']}>
+            <ProtectedRoute
+              allowedRoles={['super_admin']}
+            >
               <AdminLayout />
             </ProtectedRoute>
           }
         >
+
           <Route
             path="/super-admin/dashboard"
             element={<SuperAdminDashboard />}
           />
+
           <Route
             path="/super-admin/settings"
             element={<SuperAdminSettings />}
           />
+
         </Route>
 
-        {/* CATCH ALL */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* ========================================
+            CATCH-ALL
+        ======================================== */}
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
+
       </Routes>
 
-      {/* GLOBAL COMPONENTS */}
+      {/* ==========================================
+          GLOBAL COMPONENTS
+      ========================================== */}
       <AdsCarousel />
       <AIChatWidget />
       <AdminPopup />
