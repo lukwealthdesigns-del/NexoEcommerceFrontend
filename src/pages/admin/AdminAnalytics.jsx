@@ -1,4 +1,3 @@
-// src/pages/admin/AdminAnalytics.jsx
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
@@ -33,26 +32,15 @@ const AdminAnalytics = () => {
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const dashboardData = await adminService.getDashboardStats();
+      const data = await adminService.getAnalytics();
       setStats({
-        totalRevenue: dashboardData.totalRevenue || 0,
-        totalOrders: dashboardData.totalOrders || 0,
-        totalUsers: dashboardData.totalUsers || 0,
-        totalProducts: dashboardData.totalProducts || 0,
-        monthlyRevenue: [
-          { month: 'Jan', revenue: 125000 },
-          { month: 'Feb', revenue: 150000 },
-          { month: 'Mar', revenue: 180000 },
-          { month: 'Apr', revenue: 220000 },
-          { month: 'May', revenue: 200000 },
-          { month: 'Jun', revenue: 250000 },
-        ],
-        topProducts: [
-          { name: 'iPhone 14 Pro', sales: 45, revenue: 54000000 },
-          { name: 'Samsung Galaxy', sales: 38, revenue: 36100000 },
-          { name: 'Nike Air Max', sales: 52, revenue: 4420000 },
-        ],
-        recentOrders: []
+        totalRevenue: data.totalRevenue || 0,
+        totalOrders: data.totalOrders || 0,
+        totalUsers: data.totalUsers || 0,
+        totalProducts: data.totalProducts || 0,
+        monthlyRevenue: data.monthlyRevenue || [],
+        topProducts: data.topProducts || [],
+        recentOrders: data.recentOrders || []
       });
     } catch (error) {
       console.error('Failed to load analytics:', error);
@@ -76,6 +64,8 @@ const AdminAnalytics = () => {
       </div>
     );
   }
+
+  const maxMonthlyRevenue = Math.max(1, ...stats.monthlyRevenue.map((item) => Number(item.revenue) || 0));
 
   return (
     <div className="p-6">
@@ -115,7 +105,7 @@ const AdminAnalytics = () => {
             <div key={i} className="flex-1 flex flex-col items-center">
               <div 
                 className="w-full bg-brand-orange rounded-t-lg transition-all hover:bg-orange-600"
-                style={{ height: `${(item.revenue / 300000) * 100}%`, minHeight: '20px' }}
+                style={{ height: `${Math.max(8, (Number(item.revenue || 0) / maxMonthlyRevenue) * 100)}%` }}
               ></div>
               <p className="text-xs text-gray-500 mt-2">{item.month}</p>
               <p className="text-xs font-semibold">{formatCurrency(item.revenue)}</p>

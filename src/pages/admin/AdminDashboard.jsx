@@ -200,7 +200,7 @@ const AdminDashboard = () => {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activities</h2>
-              <button className="text-brand-orange text-sm hover:underline">View All</button>
+              <Link to="/admin/audit-logs" className="text-brand-orange text-sm hover:underline">View All</Link>
             </div>
             <div className="space-y-4">
               {recentActivities.map((activity, index) => (
@@ -229,7 +229,7 @@ const AdminDashboard = () => {
               {recentOrders.map((order) => (
                 <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">#{order.id}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">#{order.order_number || order.id}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{order.customer_name}</p>
                   </div>
                   <div className="text-right">
@@ -298,3 +298,7 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+
+
+
