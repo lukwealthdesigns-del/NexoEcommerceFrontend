@@ -224,6 +224,25 @@ export const adminService = {
   // PREMIUM MANAGEMENT
   // ============================================================
 
+  /*
+   * Backend routes (database-backed, app/routers/premium.py):
+   *
+   * GET    /premium/admin/plans
+   * POST   /premium/admin/plans
+   * PUT    /premium/admin/plans/{planKey}
+   * DELETE /premium/admin/plans/{planKey}
+   * POST   /premium/activate/{userId}?plan=...
+   * DELETE /premium/users/{userId}
+   * GET    /premium/admin/stats
+   * GET    /premium/admin/subscriptions
+   *
+   * These read/write the PremiumPlan and PremiumSubscription DB
+   * tables, which is what the public GET /premium/plans endpoint
+   * (and everything users actually see) reads from.
+   *
+   * Do NOT use /admin/premium/* for plan CRUD or activation.
+   */
+
   async getPremiumPlans() {
     const response = await api.get(
       '/premium/admin/plans'
@@ -293,6 +312,10 @@ export const adminService = {
     }
   },
 
+  // ------------------------------------------------------------
+  // CREATE PREMIUM PLAN
+  // ------------------------------------------------------------
+
   async createPremiumPlan(planData) {
     const response = await api.post(
       '/premium/admin/plans',
@@ -331,6 +354,10 @@ export const adminService = {
 
     return response.data;
   },
+
+  // ------------------------------------------------------------
+  // UPDATE PREMIUM PLAN
+  // ------------------------------------------------------------
 
   async updatePremiumPlan(
     planKey,
@@ -377,6 +404,10 @@ export const adminService = {
     return response.data;
   },
 
+  // ------------------------------------------------------------
+  // DELETE PREMIUM PLAN
+  // ------------------------------------------------------------
+
   async deletePremiumPlan(planKey) {
     const response = await api.delete(
       `/premium/admin/plans/${encodeURIComponent(
@@ -386,6 +417,10 @@ export const adminService = {
 
     return response.data;
   },
+
+  // ------------------------------------------------------------
+  // PREMIUM ACTIVATION
+  // ------------------------------------------------------------
 
   async activatePremium(userId, plan) {
     const response = await api.post(
@@ -399,6 +434,10 @@ export const adminService = {
     return response.data;
   },
 
+  // ------------------------------------------------------------
+  // PREMIUM DEACTIVATION
+  // ------------------------------------------------------------
+
   async removePremium(userId) {
     const response = await api.delete(
       `/premium/users/${userId}`
@@ -407,7 +446,9 @@ export const adminService = {
     return response.data;
   },
 
-  async deactivatePremium(subscriptionId) {
+  async deactivatePremium(
+    subscriptionId
+  ) {
     const response = await api.post(
       `/premium/admin/subscriptions/${subscriptionId}/cancel`
     );
@@ -483,6 +524,7 @@ export const adminService = {
     }
   },
 
+  // Real counts across ALL products, not just the current page.
   async getProductStats() {
     try {
       const response = await api.get(
@@ -592,13 +634,17 @@ export const adminService = {
       {
         status: orderStatus,
         tracking_number:
-          details.tracking_number || undefined,
+          details.tracking_number ||
+          undefined,
         tracking_url:
-          details.tracking_url || undefined,
+          details.tracking_url ||
+          undefined,
         estimated_delivery:
-          details.estimated_delivery || undefined,
+          details.estimated_delivery ||
+          undefined,
         notes:
-          details.notes || undefined,
+          details.notes ||
+          undefined,
       }
     );
 
