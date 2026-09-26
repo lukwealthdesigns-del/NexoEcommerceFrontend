@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -35,6 +34,7 @@ import UserDashboard from './pages/user/UserDashboard';
 import UserListings from './pages/user/UserListings';
 import UserMessages from './pages/user/UserMessages';
 import UserOrders from './pages/user/UserOrders';
+import OrderDetails from './pages/user/OrderDetails';
 import UserPremium from './pages/user/UserPremium';
 import UserProfile from './pages/user/UserProfile';
 import UserSales from './pages/user/UserSales';
@@ -94,7 +94,7 @@ function App() {
 
   return (
     <>
-      <Toaster 
+      <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
@@ -121,7 +121,7 @@ function App() {
       />
 
       <Routes>
-        {/* PUBLIC ROUTES - Wrap with layout that includes AdsCarousel */}
+        {/* PUBLIC ROUTES */}
         <Route element={<RootLayout />}>
           <Route path="/" element={<LandingPage />} />
           <Route path="/shop" element={<ShopPage />} />
@@ -131,7 +131,10 @@ function App() {
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
+          <Route
+            path="/order-confirmation/:id"
+            element={<OrderConfirmation />}
+          />
           <Route path="/profile/:userId" element={<PublicProfilePage />} />
         </Route>
 
@@ -156,9 +159,19 @@ function App() {
           <Route path="/dashboard" element={<UserDashboard />} />
           <Route path="/dashboard/listings" element={<UserListings />} />
           <Route path="/dashboard/upload" element={<UserUploadProduct />} />
-          <Route path="/dashboard/notifications" element={<UserNotifications />} />
+          <Route
+            path="/dashboard/notifications"
+            element={<UserNotifications />}
+          />
           <Route path="/dashboard/messages" element={<UserMessages />} />
+
+          {/* Orders */}
           <Route path="/dashboard/orders" element={<UserOrders />} />
+          <Route
+            path="/dashboard/orders/:id"
+            element={<OrderDetails />}
+          />
+
           <Route path="/dashboard/premium" element={<UserPremium />} />
           <Route path="/dashboard/profile" element={<UserProfile />} />
           <Route path="/dashboard/sales" element={<UserSales />} />
@@ -183,7 +196,10 @@ function App() {
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/admins" element={<AdminAdmins />} />
           <Route path="/admin/messages" element={<AdminMessages />} />
-          <Route path="/admin/notifications" element={<AdminNotifications />} />
+          <Route
+            path="/admin/notifications"
+            element={<AdminNotifications />}
+          />
           <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>
@@ -196,15 +212,21 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
-          <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+          <Route
+            path="/super-admin/dashboard"
+            element={<SuperAdminDashboard />}
+          />
+          <Route
+            path="/super-admin/settings"
+            element={<SuperAdminSettings />}
+          />
         </Route>
 
         {/* CATCH ALL */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* GLOBAL COMPONENTS - These render on every page */}
+      {/* GLOBAL COMPONENTS */}
       <AdsCarousel />
       <AIChatWidget />
       <AdminPopup />
