@@ -1,5 +1,3 @@
-
-
 import api from './api';
 
 export const ordersService = {
@@ -11,8 +9,9 @@ export const ordersService = {
   async getMyOrders(params = {}) {
     try {
       const response = await api.get('/orders/my-orders', { params });
-      // Ensure we return an array
-      return response.data.data || response.data || [];
+
+      // Backend returns { orders: [...], total, page, limit, total_pages }
+      return response.data?.orders || [];
     } catch (error) {
       console.error('Failed to get orders:', error);
       return [];
@@ -45,7 +44,12 @@ export const ordersService = {
       return response.data;
     } catch (error) {
       console.error('Failed to get earnings:', error);
-      return { total_sales: 0, total_earnings: 0, total_customers: 0, average_order_value: 0 };
+      return {
+        total_sales: 0,
+        total_earnings: 0,
+        total_customers: 0,
+        average_order_value: 0
+      };
     }
   },
   
@@ -55,7 +59,13 @@ export const ordersService = {
       return response.data;
     } catch (error) {
       console.error('Failed to get sales:', error);
-      return { orders: [], total_sales: 0, total_revenue: 0, total_customers: 0, average_order_value: 0 };
+      return {
+        orders: [],
+        total_sales: 0,
+        total_revenue: 0,
+        total_customers: 0,
+        average_order_value: 0
+      };
     }
   },
   
@@ -65,7 +75,10 @@ export const ordersService = {
   },
   
   async requestRefund(orderId, reason) {
-    const response = await api.post(`/orders/${orderId}/refund-request`, { reason });
+    const response = await api.post(
+      `/orders/${orderId}/refund-request`,
+      { reason }
+    );
     return response.data;
   },
 };
