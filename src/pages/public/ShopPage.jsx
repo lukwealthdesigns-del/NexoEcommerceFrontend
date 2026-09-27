@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Heart, MessageCircle, Filter, Search, Grid, List,
@@ -28,7 +28,12 @@ const ShopPage = () => {
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState('grid');
   const [showFilters, setShowFilters] = useState(false);
+
+  // searchQuery = what's actually in the input box (updates instantly, never blocked)
+  // debouncedSearch = what we actually send to the API (updates 500ms after typing stops)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('search') || '');
+
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
     minPrice: '',
@@ -38,6 +43,24 @@ const ShopPage = () => {
   });
   const [likedProducts, setLikedProducts] = useState(new Set());
   const [imageErrors, setImageErrors] = useState({});
+
+  // Only true before the very first fetch ever completes.
+  // Used to show the full-page spinner ONCE, on initial mount only —
+  // never again on later searches/filter changes, so the header/search
+  // bar stay mounted (and typing never gets interrupted).
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // Total matching count from the server, if it provides one.
+  // Falls back to null when the API doesn't send a total.
+  const [totalCount, setTotalCount] = useState(null);
+
+  // Guards against race conditions: if the user types "sh" then "shoe",
+  // two requests are in flight. Networks don't guarantee order, so the
+  // "sh" response can arrive AFTER the "shoe" response and overwrite it —
+  // that's the "results bounce back" bug. Each call to loadProducts stamps
+  // a unique id; when a response comes back, we only apply it if it's
+  // still the most recent request. Older/stale responses are discarded.
+  const latestRequestId = useRef(0);
 
   const categories = [
     'All', 'Electronics', 'Fashion', 'Home & Living', 'Beauty', 
@@ -59,21 +82,35 @@ const ShopPage = () => {
     { value: 'popular', label: 'Most Popular' }
   ];
 
+  // Debounce the search box: only update `debouncedSearch` once the user
+  // has stopped typing for 500ms. The user can keep typing freely the
+  // whole time — nothing here blocks the input.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer); // cancels the pending update if they keep typing
+  }, [searchQuery]);
+
+  // Whenever the debounced search term or filters actually change,
+  // reset back to page 1 for a fresh result set.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters]);
+
+  // Load products whenever the page, filters, or debounced search changes.
+  // This now fires once per "finished" search term instead of once per keystroke.
   useEffect(() => {
     loadProducts();
-  }, [page, filters, searchQuery]);
-
-  // FORCE RE-RENDER AFTER PRODUCTS LOAD - FIX FOR IMAGES NOT SHOWING
-  useEffect(() => {
-    if (products.length > 0) {
-      const timer = setTimeout(() => {
-        setProducts(prev => [...prev]);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [products]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filters, debouncedSearch]);
 
   const loadProducts = async () => {
+    // Stamp this call as the newest one. Any response that comes back
+    // once a *newer* call has already started gets thrown away below.
+    const requestId = ++latestRequestId.current;
+
     if (page === 1) {
       setLoading(true);
     } else {
@@ -89,10 +126,18 @@ const ShopPage = () => {
         ...(filters.maxPrice && { max_price: filters.maxPrice }),
         ...(filters.condition && { condition: filters.condition }),
         sort: filters.sort,
-        ...(searchQuery && { search: searchQuery })
+        ...(debouncedSearch && { search: debouncedSearch })
       };
 
       const response = await productsService.getProducts(params);
+
+      // A newer request was fired while this one was in flight — this
+      // response is stale (belongs to an older search term/page). Drop it
+      // so it can't overwrite the newer, correct results.
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
+
       let newProducts = [];
       if (Array.isArray(response)) {
         newProducts = response;
@@ -103,22 +148,38 @@ const ShopPage = () => {
       } else {
         newProducts = response;
       }
-      
-      console.log('Loaded products:', newProducts);
-      
+
+      // Try to pick up a real total count from the API response, checking
+      // the common shapes backends use for this. If none is present,
+      // we just don't claim to know the total (see the label in the JSX).
+      const apiTotal =
+        response?.total ??
+        response?.total_count ??
+        response?.count ??
+        response?.meta?.total ??
+        null;
+      setTotalCount(typeof apiTotal === 'number' ? apiTotal : null);
+
       if (page === 1) {
-        setProducts([...newProducts]);
+        setProducts(newProducts);
       } else {
         setProducts(prev => [...prev, ...newProducts]);
       }
-      
+
       setHasMore(newProducts.length === 20);
     } catch (error) {
+      // Stale errors (e.g. an aborted/superseded call) shouldn't toast either.
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
       console.error('Failed to load products:', error);
       toast.error('Failed to load products');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (requestId === latestRequestId.current) {
+        setLoading(false);
+        setLoadingMore(false);
+        setInitialLoading(false);
+      }
     }
   };
 
@@ -180,8 +241,8 @@ const ShopPage = () => {
   }, [handleScroll]);
 
   const applyFilters = () => {
-    setPage(1);
     setShowFilters(false);
+    // page reset to 1 happens automatically via the filters/debouncedSearch effect above
   };
 
   const resetFilters = () => {
@@ -193,7 +254,7 @@ const ShopPage = () => {
       sort: 'newest'
     });
     setSearchQuery('');
-    setPage(1);
+    setDebouncedSearch('');
   };
 
   const formatPrice = (price) => {
@@ -205,7 +266,10 @@ const ShopPage = () => {
     }).format(price);
   };
 
-  if (loading && page === 1) {
+  // Full-page spinner ONLY on the very first load ever (nothing rendered yet).
+  // Every later load (search, filters) keeps the header/search bar mounted
+  // and shows an inline indicator instead — see `loading` usage below.
+  if (initialLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-black">
         <Loader2 className="h-12 w-12 animate-spin text-brand-orange" />
@@ -246,10 +310,13 @@ const ShopPage = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && applyFilters()}
+                  onKeyPress={(e) => e.key === 'Enter' && setDebouncedSearch(searchQuery)}
                   placeholder="Search products..."
                   className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-brand-orange"
                 />
+                {searchQuery !== debouncedSearch && (
+                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-500" />
+                )}
               </div>
             </div>
 
@@ -353,8 +420,21 @@ const ShopPage = () => {
       </div>
 
       {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {products.length === 0 ? (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative">
+        {/* Inline loading overlay for page-1 reloads (search/filter changes).
+            Dims the existing grid instead of unmounting the whole page,
+            so the header and search input never disappear. */}
+        {loading && page === 1 && products.length > 0 && (
+          <div className="absolute inset-0 z-10 flex items-start justify-center pt-16 bg-black/40">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-orange" />
+          </div>
+        )}
+
+        {loading && page === 1 && products.length === 0 ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="h-10 w-10 animate-spin text-brand-orange" />
+          </div>
+        ) : products.length === 0 ? (
           <div className="text-center py-20">
             <ShoppingBag className="h-16 w-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">No products found</h3>
@@ -362,12 +442,18 @@ const ShopPage = () => {
           </div>
         ) : (
           <>
-            <p className="text-gray-400 text-sm mb-4">Showing {products.length} products</p>
+            <p className="text-gray-400 text-sm mb-4">
+              {totalCount !== null
+                ? `Showing ${products.length} of ${totalCount} products`
+                : hasMore
+                  ? `Showing ${products.length}+ products`
+                  : `Showing ${products.length} products`}
+            </p>
             <div className={viewMode === 'grid' 
               ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
               : "space-y-4"
             }>
-              {products.map((product, index) => {
+              {products.map((product) => {
                 const imagePath = product.images && product.images.length > 0 ? product.images[0] : null;
                 let displayImage = 'https://via.placeholder.com/400x500?text=No+Image';
                 
@@ -379,12 +465,11 @@ const ShopPage = () => {
                 const sellerId = product.seller_id;
                 
                 return (
-                  <div key={`${product.id}-${index}`} className="group">
+                  <div key={product.id} className="group">
                     {viewMode === 'grid' ? (
                       <div className="relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer bg-gray-900">
                         <Link to={`/product/${product.id}`}>
                           <img 
-                            key={`img-${product.id}-${imagePath}`}
                             src={displayImage}
                             alt={product.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
@@ -441,7 +526,6 @@ const ShopPage = () => {
                         <div className="flex gap-4 p-4">
                           <div className="w-24 h-24 flex-shrink-0">
                             <img 
-                              key={`img-${product.id}-${imagePath}`}
                               src={displayImage} 
                               alt={product.title}
                               className="w-full h-full object-cover rounded-lg"
