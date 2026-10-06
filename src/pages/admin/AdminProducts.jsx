@@ -1,3 +1,4 @@
+
 // import React, { useState, useEffect } from 'react';
 // import { useSearchParams } from 'react-router-dom';
 // import { 
@@ -13,7 +14,9 @@
 //   Tag,
 //   Filter,
 //   ChevronLeft,
-//   ChevronRight
+//   ChevronRight,
+//   Zap,
+//   X
 // } from 'lucide-react';
 // import { adminService } from '../../services/admin';
 // import { formatDate, formatCurrency } from '../../utils/formatters';
@@ -27,9 +30,15 @@
 //   return `${window.location.origin}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
 // };
 
+// const getSellerName = (product) =>
+//   product.seller_name || product.seller?.username || product.seller?.name || 'Unknown Seller';
+
 // const AdminProducts = () => {
 //   const [products, setProducts] = useState([]);
 //   const [loading, setLoading] = useState(true);
+//   const [hasLoaded, setHasLoaded] = useState(false);
+//   // searchInput = what the user is typing, searchTerm = debounced value used for the API
+//   const [searchInput, setSearchInput] = useState('');
 //   const [searchTerm, setSearchTerm] = useState('');
 //   const [filter, setFilter] = useState('pending');
 //   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -46,6 +55,10 @@
 //     total: 0,
 //   });
 
+//   // Auto-approve switch state
+//   const [autoApprove, setAutoApprove] = useState(false);
+//   const [autoApproveLoading, setAutoApproveLoading] = useState(false);
+
 //   const itemsPerPage = 10;
 
 //   useEffect(() => {
@@ -56,6 +69,16 @@
 //     }
 //   }, [searchParams]);
 
+//   // Wait 400ms after the user stops typing before searching
+//   // (stops a request on every keystroke, which is slow on phones)
+//   useEffect(() => {
+//     const timer = setTimeout(() => {
+//       setSearchTerm(searchInput.trim());
+//       setCurrentPage(1);
+//     }, 400);
+//     return () => clearTimeout(timer);
+//   }, [searchInput]);
+
 //   useEffect(() => {
 //     loadProducts();
 //   }, [currentPage, filter, searchTerm]);
@@ -64,6 +87,20 @@
 //     loadStats();
 //   }, []);
 
+//   useEffect(() => {
+//     loadAutoApprove();
+//   }, []);
+
+//   // Stop the page behind a popup from scrolling (important on phones)
+//   useEffect(() => {
+//     const open = showProductModal || showRejectModal;
+//     const previous = document.body.style.overflow;
+//     if (open) document.body.style.overflow = 'hidden';
+//     return () => {
+//       document.body.style.overflow = previous;
+//     };
+//   }, [showProductModal, showRejectModal]);
+
 //   const loadProducts = async () => {
 //     setLoading(true);
 //     try {
@@ -71,7 +108,7 @@
 //         page: currentPage, 
 //         limit: itemsPerPage,
 //         status: filter !== 'all' ? filter : undefined,
-//         search: searchTerm.trim() || undefined
+//         search: searchTerm || undefined
 //       });
       
 //       const productsList = data.products || data.data || [];
@@ -82,13 +119,11 @@
 //       toast.error('Failed to load products');
 //     } finally {
 //       setLoading(false);
+//       setHasLoaded(true);
 //     }
 //   };
 
-//   // FIX: real counts across ALL products, not just whatever happens to be
-//   // on the current page. This is what the top stat cards should reflect —
-//   // they used to be derived from `productsList`, which only ever held up
-//   // to 10 items, so the numbers were wrong/misleadingly "not live".
+//   // Real counts across ALL products, not just the current page.
 //   const loadStats = async () => {
 //     try {
 //       const data = await adminService.getProductStats();
@@ -100,6 +135,46 @@
 //       });
 //     } catch (error) {
 //       console.error('Failed to load product stats:', error);
+//     }
+//   };
+
+//   const loadAutoApprove = async () => {
+//     try {
+//       const data = await adminService.getAutoApprove();
+//       setAutoApprove(!!data.enabled);
+//     } catch (error) {
+//       console.error('Failed to load auto-approve setting:', error);
+//     }
+//   };
+
+//   const handleToggleAutoApprove = async () => {
+//     const next = !autoApprove;
+//     let approveExisting = false;
+
+//     if (next) {
+//       if (!confirm('Turn ON auto-approve? New products will go live without your review.')) return;
+//       if (stats.pending > 0) {
+//         approveExisting = confirm(
+//           `You have ${stats.pending} pending product(s). Approve them all now too?\n\nOK = approve them, Cancel = leave them pending`
+//         );
+//       }
+//     }
+
+//     setAutoApproveLoading(true);
+//     try {
+//       const result = await adminService.setAutoApprove(next, approveExisting);
+//       setAutoApprove(next);
+//       toast.success(
+//         next
+//           ? `Auto-approve is ON${result.approved_existing ? ` (${result.approved_existing} approved)` : ''}`
+//           : 'Auto-approve is OFF. You approve manually now.'
+//       );
+//       loadProducts();
+//       loadStats();
+//     } catch (error) {
+//       toast.error('Failed to change auto-approve setting');
+//     } finally {
+//       setAutoApproveLoading(false);
 //     }
 //   };
 
@@ -132,25 +207,35 @@
 //     }
 //   };
 
+//   const openDetails = (product) => {
+//     setSelectedProduct(product);
+//     setShowProductModal(true);
+//   };
+
+//   const openReject = (product) => {
+//     setSelectedProduct(product);
+//     setShowRejectModal(true);
+//   };
+
 //   const getStatusBadge = (status) => {
 //     switch(status) {
 //       case 'approved':
 //         return (
-//           <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
+//           <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 whitespace-nowrap">
 //             <CheckCircle className="h-3 w-3 mr-1" />
 //             Approved
 //           </span>
 //         );
 //       case 'rejected':
 //         return (
-//           <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
+//           <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 whitespace-nowrap">
 //             <XCircle className="h-3 w-3 mr-1" />
 //             Rejected
 //           </span>
 //         );
 //       default:
 //         return (
-//           <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700">
+//           <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 whitespace-nowrap">
 //             <Clock className="h-3 w-3 mr-1" />
 //             Pending
 //           </span>
@@ -167,7 +252,10 @@
 
 //   const filteredProducts = products;
 
-//   if (loading) {
+//   // Full-screen spinner ONLY on the very first load.
+//   // Before, it replaced the whole page on every search/filter/page change,
+//   // which closed the keyboard on phones while typing.
+//   if (!hasLoaded) {
 //     return (
 //       <div className="flex items-center justify-center min-h-[60vh]">
 //         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-orange"></div>
@@ -176,16 +264,51 @@
 //   }
 
 //   return (
-//     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+//     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+//       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
 //         {/* Header */}
-//         <div className="mb-8">
-//           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Product Management</h1>
-//           <p className="text-gray-600 dark:text-gray-400 mt-2">Approve or reject product listings</p>
+//         <div className="mb-5 sm:mb-8">
+//           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Product Management</h1>
+//           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">Approve or reject product listings</p>
 //         </div>
 
-//         {/* Stats Cards */}
-//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+//         {/* Auto-Approve Switch */}
+//         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 sm:p-5 mb-5 sm:mb-8 flex items-center justify-between gap-3">
+//           <div className="flex items-center gap-3 min-w-0">
+//             <div className={`p-2.5 sm:p-3 rounded-xl shrink-0 ${autoApprove ? 'bg-green-500' : 'bg-gray-400'}`}>
+//               <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+//             </div>
+//             <div className="min-w-0">
+//               <p className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">Auto-approve new products</p>
+//               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+//                 {autoApprove
+//                   ? 'ON: new products go live automatically'
+//                   : 'OFF: you approve each product manually'}
+//               </p>
+//             </div>
+//           </div>
+
+//           <button
+//             type="button"
+//             role="switch"
+//             aria-checked={autoApprove}
+//             aria-label="Auto-approve new products"
+//             onClick={handleToggleAutoApprove}
+//             disabled={autoApproveLoading}
+//             className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-orange disabled:opacity-50 ${
+//               autoApprove ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+//             }`}
+//           >
+//             <span
+//               className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+//                 autoApprove ? 'translate-x-7' : 'translate-x-1'
+//               }`}
+//             />
+//           </button>
+//         </div>
+
+//         {/* Stats Cards: 2 per row on phones, 4 on large screens */}
+//         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-5 sm:mb-8">
 //           {statCards.map((stat, index) => (
 //             <button
 //               type="button"
@@ -196,15 +319,15 @@
 //                 setFilter(next);
 //                 setSearchParams(next === 'all' ? {} : { status: next });
 //               }}
-//               className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 text-left hover:shadow-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-orange"
+//               className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-3 sm:p-6 text-left hover:shadow-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-orange"
 //             >
-//               <div className="flex items-center justify-between">
-//                 <div>
-//                   <p className="text-sm text-gray-600 dark:text-gray-400">{stat.title}</p>
-//                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
+//               <div className="flex items-center justify-between gap-2">
+//                 <div className="min-w-0">
+//                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{stat.title}</p>
+//                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
 //                 </div>
-//                 <div className={`${stat.color} p-3 rounded-xl`}>
-//                   <stat.icon className="h-6 w-6 text-white" />
+//                 <div className={`${stat.color} p-2 sm:p-3 rounded-xl shrink-0`}>
+//                   <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
 //                 </div>
 //               </div>
 //             </button>
@@ -212,124 +335,125 @@
 //         </div>
 
 //         {/* Search and Filters */}
-//         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 mb-6">
-//           <div className="flex flex-col md:flex-row gap-4">
+//         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-3 sm:p-4 mb-4 sm:mb-6">
+//           <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
 //             <div className="flex-1 relative">
 //               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
 //               <input
 //                 type="text"
-//                 placeholder="Search by product name, category or seller..."
-//                 value={searchTerm}
-//                 onChange={(e) => setSearchTerm(e.target.value)}
-//                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+//                 placeholder="Search by product name..."
+//                 value={searchInput}
+//                 onChange={(e) => setSearchInput(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 //               />
 //             </div>
-//             <select
-//               value={filter}
-//               onChange={(e) => {
-//                 const next = e.target.value;
-//                 setCurrentPage(1);
-//                 setFilter(next);
-//                 setSearchParams(next === 'all' ? {} : { status: next });
-//               }}
-//               className="w-full md:w-48 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-//             >
-//               <option value="pending">Pending Approval</option>
-//               <option value="approved">Approved</option>
-//               <option value="rejected">Rejected</option>
-//               <option value="all">All Products</option>
-//             </select>
-//             <button
-//               onClick={() => { loadProducts(); loadStats(); }}
-//               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center space-x-2"
-//             >
-//               <RefreshCw className="h-4 w-4" />
-//               <span>Refresh</span>
-//             </button>
+//             <div className="flex gap-3">
+//               <select
+//                 value={filter}
+//                 onChange={(e) => {
+//                   const next = e.target.value;
+//                   setCurrentPage(1);
+//                   setFilter(next);
+//                   setSearchParams(next === 'all' ? {} : { status: next });
+//                 }}
+//                 className="flex-1 md:flex-none md:w-48 px-3 sm:px-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+//               >
+//                 <option value="pending">Pending Approval</option>
+//                 <option value="approved">Approved</option>
+//                 <option value="rejected">Rejected</option>
+//                 <option value="all">All Products</option>
+//               </select>
+//               <button
+//                 onClick={() => { loadProducts(); loadStats(); }}
+//                 aria-label="Refresh"
+//                 className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 text-gray-700 dark:text-gray-200"
+//               >
+//                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+//                 <span className="hidden sm:inline">Refresh</span>
+//               </button>
+//             </div>
 //           </div>
 //         </div>
 
-//         {/* Products Table */}
-//         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
-//           <div className="overflow-x-auto">
+//         {/* Products */}
+//         <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden transition-opacity ${loading ? 'opacity-60' : 'opacity-100'}`}>
+
+//           {/* DESKTOP / TABLET (md and up): table */}
+//           <div className="hidden md:block overflow-x-auto">
 //             <table className="w-full">
 //               <thead>
 //                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-//                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Product</th>
-//                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Price</th>
-//                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Seller</th>
-//                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Category</th>
-//                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Submitted</th>
-//                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Status</th>
-//                   <th className="text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Actions</th>
+//                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Product</th>
+//                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Price</th>
+//                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Seller</th>
+//                   <th className="hidden lg:table-cell text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Category</th>
+//                   <th className="hidden lg:table-cell text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Submitted</th>
+//                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Status</th>
+//                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Actions</th>
 //                 </tr>
 //               </thead>
 //               <tbody>
 //                 {filteredProducts.map((product) => {
-//                   // Get the correct image URL
 //                   const imageUrl = product.images && product.images[0] ? getImageUrl(product.images[0]) : null;
-//                   // Get seller name
-//                   const sellerName = product.seller_name || product.seller?.username || product.seller?.name || 'Unknown Seller';
+//                   const sellerName = getSellerName(product);
                   
 //                   return (
 //                     <tr key={product.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-//                       <td className="py-4 px-6">
-//                         <div className="flex items-center space-x-3">
+//                       <td className="py-4 px-4 lg:px-6">
+//                         <div className="flex items-center gap-3 min-w-0">
 //                           {imageUrl ? (
 //                             <img 
 //                               src={imageUrl}
 //                               alt={product.title}
-//                               className="w-12 h-12 rounded-lg object-cover"
+//                               className="w-12 h-12 rounded-lg object-cover shrink-0"
 //                               onError={(e) => {
 //                                 e.target.src = 'https://via.placeholder.com/48x48?text=No+Image';
 //                               }}
 //                             />
 //                           ) : (
-//                             <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+//                             <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
 //                               <Image className="h-6 w-6 text-gray-400" />
 //                             </div>
 //                           )}
-//                           <div>
-//                             <p className="font-medium text-gray-900 dark:text-white">{product.title}</p>
-//                             <p className="text-sm text-gray-500 dark:text-gray-400">{product.description?.substring(0, 60)}...</p>
+//                           <div className="min-w-0 max-w-[220px] lg:max-w-xs">
+//                             <p className="font-medium text-gray-900 dark:text-white truncate">{product.title}</p>
+//                             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{product.description?.substring(0, 60)}...</p>
 //                           </div>
 //                         </div>
 //                       </td>
-//                       <td className="py-4 px-6">
-//                         <span className="font-semibold text-gray-900 dark:text-white">
+//                       <td className="py-4 px-4 lg:px-6">
+//                         <span className="font-semibold text-gray-900 dark:text-white whitespace-nowrap">
 //                           {formatCurrency(product.price)}
 //                         </span>
-//                        </td>
-//                       <td className="py-4 px-6">
-//                         <div className="flex items-center space-x-2">
-//                           <User className="h-4 w-4 text-gray-400" />
-//                           <span className="text-sm text-gray-600 dark:text-gray-400">
+//                       </td>
+//                       <td className="py-4 px-4 lg:px-6">
+//                         <div className="flex items-center gap-2">
+//                           <User className="h-4 w-4 text-gray-400 shrink-0" />
+//                           <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[120px]">
 //                             {sellerName}
 //                           </span>
 //                         </div>
-//                        </td>
-//                       <td className="py-4 px-6">
-//                         <span className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700">
+//                       </td>
+//                       <td className="hidden lg:table-cell py-4 px-6">
+//                         <span className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
 //                           {product.category}
 //                         </span>
-//                        </td>
-//                       <td className="py-4 px-6">
+//                       </td>
+//                       <td className="hidden lg:table-cell py-4 px-6">
 //                         <span className="text-sm text-gray-500 dark:text-gray-400">
 //                           {formatDate(product.created_at)}
 //                         </span>
-//                        </td>
-//                       <td className="py-4 px-6">
+//                       </td>
+//                       <td className="py-4 px-4 lg:px-6">
 //                         {getStatusBadge(product.status)}
-//                        </td>
-//                       <td className="py-4 px-6">
-//                         <div className="flex items-center space-x-2">
+//                       </td>
+//                       <td className="py-4 px-4 lg:px-6">
+//                         <div className="flex items-center gap-1">
 //                           <button
-//                             onClick={() => {
-//                               setSelectedProduct(product);
-//                               setShowProductModal(true);
-//                             }}
-//                             className="p-1.5 text-blue-500 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+//                             onClick={() => openDetails(product)}
+//                             className="p-2 text-blue-500 hover:text-blue-600 rounded-lg hover:bg-blue-50"
 //                             title="View Details"
+//                             aria-label="View details"
 //                           >
 //                             <Eye className="h-4 w-4" />
 //                           </button>
@@ -337,30 +461,112 @@
 //                             <>
 //                               <button
 //                                 onClick={() => handleApproveProduct(product)}
-//                                 className="p-1.5 text-green-500 hover:text-green-600 rounded-lg hover:bg-green-50"
+//                                 className="p-2 text-green-500 hover:text-green-600 rounded-lg hover:bg-green-50"
 //                                 title="Approve"
+//                                 aria-label="Approve"
 //                               >
 //                                 <CheckCircle className="h-4 w-4" />
 //                               </button>
 //                               <button
-//                                 onClick={() => {
-//                                   setSelectedProduct(product);
-//                                   setShowRejectModal(true);
-//                                 }}
-//                                 className="p-1.5 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50"
+//                                 onClick={() => openReject(product)}
+//                                 className="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50"
 //                                 title="Reject"
+//                                 aria-label="Reject"
 //                               >
 //                                 <XCircle className="h-4 w-4" />
 //                               </button>
 //                             </>
 //                           )}
 //                         </div>
-//                        </td>
+//                       </td>
 //                     </tr>
 //                   );
 //                 })}
 //               </tbody>
 //             </table>
+//           </div>
+
+//           {/* PHONES (below md): card list */}
+//           <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+//             {filteredProducts.map((product) => {
+//               const imageUrl = product.images && product.images[0] ? getImageUrl(product.images[0]) : null;
+//               const sellerName = getSellerName(product);
+
+//               return (
+//                 <div key={product.id} className="p-4">
+//                   <div className="flex gap-3">
+//                     {imageUrl ? (
+//                       <img
+//                         src={imageUrl}
+//                         alt={product.title}
+//                         className="w-16 h-16 rounded-lg object-cover shrink-0"
+//                         onError={(e) => {
+//                           e.target.src = 'https://via.placeholder.com/64x64?text=No+Image';
+//                         }}
+//                       />
+//                     ) : (
+//                       <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+//                         <Image className="h-6 w-6 text-gray-400" />
+//                       </div>
+//                     )}
+//                     <div className="min-w-0 flex-1">
+//                       <p className="font-medium text-gray-900 dark:text-white break-words">{product.title}</p>
+//                       <p className="text-sm text-gray-500 dark:text-gray-400 break-words">
+//                         {product.description?.substring(0, 70)}{product.description?.length > 70 ? '...' : ''}
+//                       </p>
+//                     </div>
+//                   </div>
+
+//                   <div className="mt-3 flex flex-wrap items-center gap-2">
+//                     <span className="font-semibold text-gray-900 dark:text-white">
+//                       {formatCurrency(product.price)}
+//                     </span>
+//                     {getStatusBadge(product.status)}
+//                     {product.category && (
+//                       <span className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+//                         {product.category}
+//                       </span>
+//                     )}
+//                   </div>
+
+//                   <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+//                     <span className="flex items-center gap-1 min-w-0">
+//                       <User className="h-3.5 w-3.5 shrink-0" />
+//                       <span className="truncate">{sellerName}</span>
+//                     </span>
+//                     <span className="shrink-0">{formatDate(product.created_at)}</span>
+//                   </div>
+
+//                   <div className="mt-3 flex gap-2">
+//                     <button
+//                       onClick={() => openDetails(product)}
+//                       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-900/20"
+//                     >
+//                       <Eye className="h-4 w-4" />
+//                       View
+//                     </button>
+//                     {product.status === 'pending' && (
+//                       <>
+//                         <button
+//                           onClick={() => handleApproveProduct(product)}
+//                           className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl bg-green-500 text-white hover:bg-green-600"
+//                         >
+//                           <CheckCircle className="h-4 w-4" />
+//                           Approve
+//                         </button>
+//                         <button
+//                           onClick={() => openReject(product)}
+//                           className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl bg-red-500 text-white hover:bg-red-600"
+//                         >
+//                           <XCircle className="h-4 w-4" />
+//                           Reject
+//                         </button>
+//                       </>
+//                     )}
+//                   </div>
+//                 </div>
+//               );
+//             })}
 //           </div>
           
 //           {filteredProducts.length === 0 && (
@@ -372,11 +578,11 @@
 
 //           {/* Pagination */}
 //           {totalPages > 1 && (
-//             <div className="flex justify-center items-center space-x-2 py-4 border-t border-gray-200 dark:border-gray-700">
+//             <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3 py-4 px-3 border-t border-gray-200 dark:border-gray-700">
 //               <button
 //                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
 //                 disabled={currentPage === 1}
-//                 className="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50"
+//                 className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-50"
 //               >
 //                 <ChevronLeft className="h-4 w-4" />
 //                 Previous
@@ -387,7 +593,7 @@
 //               <button
 //                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
 //                 disabled={currentPage === totalPages}
-//                 className="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50"
+//                 className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-50"
 //               >
 //                 Next
 //                 <ChevronRight className="h-4 w-4" />
@@ -397,27 +603,38 @@
 //         </div>
 //       </div>
 
-//       {/* Product Details Modal */}
+//       {/* Product Details Modal (slides up from the bottom on phones) */}
 //       {showProductModal && selectedProduct && (
-//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-//             <div className="flex justify-between items-center mb-4">
-//               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Product Details</h2>
-//               <button onClick={() => setShowProductModal(false)} className="text-gray-500 hover:text-gray-700">
-//                 ✕
+//         <div
+//           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4"
+//           onClick={() => setShowProductModal(false)}
+//         >
+//           <div
+//             className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto"
+//             style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+//             onClick={(e) => e.stopPropagation()}
+//           >
+//             <div className="flex justify-between items-center mb-4 gap-3">
+//               <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Product Details</h2>
+//               <button
+//                 onClick={() => setShowProductModal(false)}
+//                 aria-label="Close"
+//                 className="p-2 -mr-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 rounded-lg"
+//               >
+//                 <X className="h-5 w-5" />
 //               </button>
 //             </div>
             
 //             <div className="space-y-4">
 //               {/* Product Images */}
 //               {selectedProduct.images && selectedProduct.images.length > 0 && (
-//                 <div className="flex space-x-2 overflow-x-auto">
+//                 <div className="flex gap-2 overflow-x-auto pb-1">
 //                   {selectedProduct.images.map((img, idx) => (
 //                     <img 
 //                       key={idx} 
 //                       src={getImageUrl(img)} 
 //                       alt="" 
-//                       className="w-24 h-24 rounded-lg object-cover"
+//                       className="w-24 h-24 rounded-lg object-cover shrink-0"
 //                       onError={(e) => {
 //                         e.target.src = 'https://via.placeholder.com/96x96?text=No+Image';
 //                       }}
@@ -428,17 +645,17 @@
               
 //               {/* Product Info */}
 //               <div>
-//                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedProduct.title}</h3>
-//                 <p className="text-gray-600 dark:text-gray-400 mt-1">{selectedProduct.description}</p>
+//                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white break-words">{selectedProduct.title}</h3>
+//                 <p className="text-gray-600 dark:text-gray-400 mt-1 break-words">{selectedProduct.description}</p>
 //               </div>
               
 //               {/* Seller Info in Modal */}
 //               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
 //                 <p className="text-sm text-gray-500 dark:text-gray-400">Seller Information</p>
-//                 <div className="flex items-center space-x-2 mt-1">
-//                   <User className="h-4 w-4 text-brand-orange" />
-//                   <span className="text-gray-900 dark:text-white font-medium">
-//                     {selectedProduct.seller_name || selectedProduct.seller?.username || 'Unknown Seller'}
+//                 <div className="flex items-center gap-2 mt-1">
+//                   <User className="h-4 w-4 text-brand-orange shrink-0" />
+//                   <span className="text-gray-900 dark:text-white font-medium break-words">
+//                     {getSellerName(selectedProduct)}
 //                   </span>
 //                 </div>
 //               </div>
@@ -450,26 +667,26 @@
 //                 </div>
 //                 <div>
 //                   <p className="text-sm text-gray-500 dark:text-gray-400">Category</p>
-//                   <p>{selectedProduct.category}</p>
+//                   <p className="text-gray-900 dark:text-white break-words">{selectedProduct.category}</p>
 //                 </div>
 //                 <div>
 //                   <p className="text-sm text-gray-500 dark:text-gray-400">Condition</p>
-//                   <p>{selectedProduct.condition || 'New'}</p>
+//                   <p className="text-gray-900 dark:text-white">{selectedProduct.condition || 'New'}</p>
 //                 </div>
 //                 <div>
 //                   <p className="text-sm text-gray-500 dark:text-gray-400">Stock</p>
-//                   <p>{selectedProduct.stock_qty || 0} units</p>
+//                   <p className="text-gray-900 dark:text-white">{selectedProduct.stock_qty || 0} units</p>
 //                 </div>
 //               </div>
               
 //               {selectedProduct.status === 'pending' && (
-//                 <div className="flex space-x-3 pt-4">
+//                 <div className="flex flex-col sm:flex-row gap-3 pt-2 sm:pt-4">
 //                   <button
 //                     onClick={() => {
 //                       handleApproveProduct(selectedProduct);
 //                       setShowProductModal(false);
 //                     }}
-//                     className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl"
+//                     className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl"
 //                   >
 //                     Approve Product
 //                   </button>
@@ -479,7 +696,7 @@
 //                       setSelectedProduct(selectedProduct);
 //                       setShowRejectModal(true);
 //                     }}
-//                     className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl"
+//                     className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl"
 //                   >
 //                     Reject Product
 //                   </button>
@@ -490,12 +707,19 @@
 //         </div>
 //       )}
 
-//       {/* Reject Modal */}
+//       {/* Reject Modal (slides up from the bottom on phones) */}
 //       {showRejectModal && selectedProduct && (
-//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-//           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4">
-//             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Reject Product</h2>
-//             <p className="text-gray-600 dark:text-gray-400 mb-4">
+//         <div
+//           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4"
+//           onClick={() => setShowRejectModal(false)}
+//         >
+//           <div
+//             className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 w-full sm:max-w-md max-h-[92vh] overflow-y-auto"
+//             style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+//             onClick={(e) => e.stopPropagation()}
+//           >
+//             <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Reject Product</h2>
+//             <p className="text-gray-600 dark:text-gray-400 mb-4 break-words">
 //               Reject "{selectedProduct.title}"?
 //             </p>
 //             <div>
@@ -506,15 +730,21 @@
 //                 value={rejectReason}
 //                 onChange={(e) => setRejectReason(e.target.value)}
 //                 rows="3"
-//                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+//                 className="w-full px-4 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 //                 placeholder="Enter reason for rejection..."
 //               />
 //             </div>
-//             <div className="flex space-x-3 mt-6">
-//               <button onClick={() => setShowRejectModal(false)} className="flex-1 px-4 py-2 border rounded-xl">
+//             <div className="flex flex-col-reverse sm:flex-row gap-3 mt-5 sm:mt-6">
+//               <button
+//                 onClick={() => setShowRejectModal(false)}
+//                 className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl"
+//               >
 //                 Cancel
 //               </button>
-//               <button onClick={handleRejectProduct} className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl">
+//               <button
+//                 onClick={handleRejectProduct}
+//                 className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl"
+//               >
 //                 Reject Product
 //               </button>
 //             </div>
@@ -527,759 +757,1626 @@
 
 // export default AdminProducts;
 import React, { useState, useEffect } from 'react';
+
 import { useSearchParams } from 'react-router-dom';
+
 import { 
+
   Search, 
+
   Eye, 
+
   CheckCircle, 
+
   XCircle, 
+
   Clock, 
+
   RefreshCw,
+
   Image,
+
   DollarSign,
+
   User,
+
   Tag,
+
   Filter,
+
   ChevronLeft,
+
   ChevronRight,
+
   Zap,
+
   X
+
 } from 'lucide-react';
+
 import { adminService } from '../../services/admin';
+
 import { formatDate, formatCurrency } from '../../utils/formatters';
+
 import toast from 'react-hot-toast';
 
+
+
 // Helper function to get full image URL
+
 const getImageUrl = (imagePath) => {
+
   if (!imagePath) return null;
+
   if (imagePath.startsWith('http')) return imagePath;
+
   if (imagePath.startsWith('data:')) return imagePath;
+
   return `${window.location.origin}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+
 };
 
+
+
 const getSellerName = (product) =>
+
   product.seller_name || product.seller?.username || product.seller?.name || 'Unknown Seller';
 
+
+
 const AdminProducts = () => {
+
   const [products, setProducts] = useState([]);
+
   const [loading, setLoading] = useState(true);
+
   const [hasLoaded, setHasLoaded] = useState(false);
+
   // searchInput = what the user is typing, searchTerm = debounced value used for the API
+
   const [searchInput, setSearchInput] = useState('');
+
   const [searchTerm, setSearchTerm] = useState('');
+
   const [filter, setFilter] = useState('pending');
+
   const [selectedProduct, setSelectedProduct] = useState(null);
+
   const [showProductModal, setShowProductModal] = useState(false);
+
   const [rejectReason, setRejectReason] = useState('');
+
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedSeller, setSelectedSeller] = useState(null);
+  const [showSellerModal, setShowSellerModal] = useState(false);
+  const [sellerLoading, setSellerLoading] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
+
   const [totalPages, setTotalPages] = useState(1);
+
   const [searchParams, setSearchParams] = useSearchParams();
+
   const [stats, setStats] = useState({
+
     pending: 0,
+
     approved: 0,
+
     rejected: 0,
+
     total: 0,
+
   });
 
+
+
   // Auto-approve switch state
+
   const [autoApprove, setAutoApprove] = useState(false);
+
   const [autoApproveLoading, setAutoApproveLoading] = useState(false);
+
+
 
   const itemsPerPage = 10;
 
+
+
   useEffect(() => {
+
     const requestedStatus = searchParams.get('status');
-    const allowed = ['pending', 'approved', 'rejected', 'all'];
+
+    const allowed = ['pending', 'approved', 'rejected', 'auto_approved', 'all'];
+
     if (requestedStatus && allowed.includes(requestedStatus)) {
+
       setFilter(requestedStatus);
+
     }
+
   }, [searchParams]);
 
+
+
   // Wait 400ms after the user stops typing before searching
+
   // (stops a request on every keystroke, which is slow on phones)
+
   useEffect(() => {
+
     const timer = setTimeout(() => {
+
       setSearchTerm(searchInput.trim());
+
       setCurrentPage(1);
+
     }, 400);
+
     return () => clearTimeout(timer);
+
   }, [searchInput]);
 
+
+
   useEffect(() => {
+
     loadProducts();
+
   }, [currentPage, filter, searchTerm]);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
+
 
   useEffect(() => {
-    loadAutoApprove();
+
+    loadStats();
+
   }, []);
+
+
+
+  useEffect(() => {
+
+    loadAutoApprove();
+
+  }, []);
+
+
 
   // Stop the page behind a popup from scrolling (important on phones)
+
   useEffect(() => {
-    const open = showProductModal || showRejectModal;
+
+    const open = showProductModal || showRejectModal || showSellerModal;
+
     const previous = document.body.style.overflow;
+
     if (open) document.body.style.overflow = 'hidden';
+
     return () => {
+
       document.body.style.overflow = previous;
+
     };
+
   }, [showProductModal, showRejectModal]);
 
+
+
   const loadProducts = async () => {
+
     setLoading(true);
+
     try {
+
       const data = await adminService.getAllProducts({ 
+
         page: currentPage, 
+
         limit: itemsPerPage,
+
         status: filter !== 'all' ? filter : undefined,
+
         search: searchTerm || undefined
+
       });
-      
+
+
+
       const productsList = data.products || data.data || [];
+
       setProducts(productsList);
+
       setTotalPages(data.total_pages || Math.ceil((data.total || productsList.length) / itemsPerPage));
+
     } catch (error) {
+
       console.error('Failed to load products:', error);
+
       toast.error('Failed to load products');
+
     } finally {
+
       setLoading(false);
+
       setHasLoaded(true);
+
     }
+
   };
+
+
 
   // Real counts across ALL products, not just the current page.
+
   const loadStats = async () => {
+
     try {
+
       const data = await adminService.getProductStats();
+
       setStats({
+
         pending: data.pending || 0,
+
         approved: data.approved || 0,
+
         rejected: data.rejected || 0,
+
         total: data.total || 0,
+
       });
+
     } catch (error) {
+
       console.error('Failed to load product stats:', error);
+
     }
+
   };
+
+
 
   const loadAutoApprove = async () => {
+
     try {
+
       const data = await adminService.getAutoApprove();
+
       setAutoApprove(!!data.enabled);
+
     } catch (error) {
+
       console.error('Failed to load auto-approve setting:', error);
+
     }
+
   };
+
+
 
   const handleToggleAutoApprove = async () => {
+
     const next = !autoApprove;
+
     let approveExisting = false;
 
+
+
     if (next) {
+
       if (!confirm('Turn ON auto-approve? New products will go live without your review.')) return;
+
       if (stats.pending > 0) {
+
         approveExisting = confirm(
+
           `You have ${stats.pending} pending product(s). Approve them all now too?\n\nOK = approve them, Cancel = leave them pending`
+
         );
+
       }
+
     }
+
+
 
     setAutoApproveLoading(true);
+
     try {
+
       const result = await adminService.setAutoApprove(next, approveExisting);
+
       setAutoApprove(next);
+
       toast.success(
+
         next
+
           ? `Auto-approve is ON${result.approved_existing ? ` (${result.approved_existing} approved)` : ''}`
+
           : 'Auto-approve is OFF. You approve manually now.'
+
       );
+
       loadProducts();
+
       loadStats();
+
     } catch (error) {
+
       toast.error('Failed to change auto-approve setting');
+
     } finally {
+
       setAutoApproveLoading(false);
+
     }
+
   };
+
+
 
   const handleApproveProduct = async (product) => {
+
     if (!confirm(`Approve "${product.title}"?`)) return;
-    
+
+
+
     try {
+
       await adminService.approveProduct(product.id);
+
       toast.success(`${product.title} has been approved`);
+
       loadProducts();
+
       loadStats();
+
     } catch (error) {
+
       toast.error('Failed to approve product');
+
     }
+
   };
 
+
+
   const handleRejectProduct = async () => {
+
     if (!selectedProduct) return;
-    
+
+    const reason = rejectReason.trim();
+
+    if (!reason) {
+      toast.error('Please provide a reason for rejecting this post');
+      return;
+    }
+
+    if (reason.length < 5) {
+      toast.error('Please provide a clear rejection reason');
+      return;
+    }
+
     try {
-      await adminService.rejectProduct(selectedProduct.id, rejectReason);
+
+      await adminService.rejectProduct(selectedProduct.id, reason);
+
       toast.success(`${selectedProduct.title} has been rejected`);
+
       setShowRejectModal(false);
+
       setRejectReason('');
+
+      setSelectedProduct(null);
+
+      loadProducts();
+
+      loadStats();
+
+    } catch (error) {
+
+      toast.error('Failed to reject product');
+
+    }
+
+  };
+
+
+
+  const handleDeleteProduct = async (product) => {
+    if (!product) return;
+    if (!window.confirm(`Delete "${product.title}" permanently?`)) return;
+    try {
+      await adminService.deleteProduct(product.id);
+      toast.success('Product deleted successfully');
+      setShowProductModal(false);
       setSelectedProduct(null);
       loadProducts();
       loadStats();
     } catch (error) {
-      toast.error('Failed to reject product');
+      console.error('Failed to delete product:', error);
+      toast.error('Failed to delete product');
     }
+  };
+
+  const handleViewProfile = async (product) => {
+    const sellerId = product?.seller?.id || product?.seller_id;
+    if (!sellerId) { toast.error('Seller profile is not available'); return; }
+    setSellerLoading(true);
+    setShowSellerModal(true);
+    try {
+      const data = await adminService.getUser(sellerId);
+      setSelectedSeller(data?.user || data?.data || data);
+    } catch (error) {
+      console.error('Failed to load seller profile:', error);
+      toast.error('Failed to load seller profile');
+      setShowSellerModal(false);
+    } finally { setSellerLoading(false); }
   };
 
   const openDetails = (product) => {
+
     setSelectedProduct(product);
+
     setShowProductModal(true);
+
   };
+
+
 
   const openReject = (product) => {
+
     setSelectedProduct(product);
+
     setShowRejectModal(true);
+
   };
+
+
 
   const getStatusBadge = (status) => {
+
     switch(status) {
+
       case 'approved':
+
         return (
+
           <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+
             <CheckCircle className="h-3 w-3 mr-1" />
+
             Approved
+
           </span>
+
         );
+
       case 'rejected':
+
         return (
+
           <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 whitespace-nowrap">
+
             <XCircle className="h-3 w-3 mr-1" />
+
             Rejected
+
           </span>
+
         );
-      default:
+
+      case 'processing':
+
         return (
-          <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 whitespace-nowrap">
+
+          <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700 whitespace-nowrap">
+
             <Clock className="h-3 w-3 mr-1" />
-            Pending
+
+            Processing
+
           </span>
+
         );
+
+      default:
+
+        return (
+
+          <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 whitespace-nowrap">
+
+            <Clock className="h-3 w-3 mr-1" />
+
+            Pending
+
+          </span>
+
+        );
+
     }
+
   };
 
+
+
   const statCards = [
+
     { title: 'Pending Approval', value: stats.pending, icon: Clock, color: 'bg-yellow-500' },
+
     { title: 'Approved', value: stats.approved, icon: CheckCircle, color: 'bg-green-500' },
+
     { title: 'Rejected', value: stats.rejected, icon: XCircle, color: 'bg-red-500' },
+
     { title: 'Total Products', value: stats.total, icon: Tag, color: 'bg-blue-500' },
+
   ];
+
+
 
   const filteredProducts = products;
 
+
+
   // Full-screen spinner ONLY on the very first load.
+
   // Before, it replaced the whole page on every search/filter/page change,
+
   // which closed the keyboard on phones while typing.
+
   if (!hasLoaded) {
+
     return (
+
       <div className="flex items-center justify-center min-h-[60vh]">
+
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-orange"></div>
+
       </div>
+
     );
+
   }
 
+
+
   return (
+
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+
         {/* Header */}
+
         <div className="mb-5 sm:mb-8">
+
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Product Management</h1>
+
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">Approve or reject product listings</p>
+
         </div>
+
+
 
         {/* Auto-Approve Switch */}
+
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 sm:p-5 mb-5 sm:mb-8 flex items-center justify-between gap-3">
+
           <div className="flex items-center gap-3 min-w-0">
+
             <div className={`p-2.5 sm:p-3 rounded-xl shrink-0 ${autoApprove ? 'bg-green-500' : 'bg-gray-400'}`}>
+
               <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+
             </div>
+
             <div className="min-w-0">
+
               <p className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">Auto-approve new products</p>
+
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+
                 {autoApprove
-                  ? 'ON: new products go live automatically'
+
+                  ? 'ON: new products are checked automatically before going live'
+
                   : 'OFF: you approve each product manually'}
+
               </p>
+
             </div>
+
           </div>
 
+
+
           <button
+
             type="button"
+
             role="switch"
+
             aria-checked={autoApprove}
+
             aria-label="Auto-approve new products"
+
             onClick={handleToggleAutoApprove}
+
             disabled={autoApproveLoading}
+
             className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-orange disabled:opacity-50 ${
+
               autoApprove ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+
             }`}
+
           >
+
             <span
+
               className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+
                 autoApprove ? 'translate-x-7' : 'translate-x-1'
+
               }`}
+
             />
+
           </button>
+
         </div>
 
+
+
         {/* Stats Cards: 2 per row on phones, 4 on large screens */}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-5 sm:mb-8">
+
           {statCards.map((stat, index) => (
+
             <button
+
               type="button"
+
               key={index}
+
               onClick={() => {
+
                 const next = ['pending', 'approved', 'rejected', 'all'][index];
+
                 setCurrentPage(1);
+
                 setFilter(next);
+
                 setSearchParams(next === 'all' ? {} : { status: next });
+
               }}
+
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-3 sm:p-6 text-left hover:shadow-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-orange"
+
             >
+
               <div className="flex items-center justify-between gap-2">
+
                 <div className="min-w-0">
+
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{stat.title}</p>
+
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
+
                 </div>
+
                 <div className={`${stat.color} p-2 sm:p-3 rounded-xl shrink-0`}>
+
                   <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+
                 </div>
+
               </div>
+
             </button>
+
           ))}
+
+        </div>
+
+
+
+        {/* Product Review Tabs */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-2 sm:p-3 mb-4 sm:mb-6 overflow-x-auto">
+          <div className="flex items-center gap-2 min-w-max">
+            {[['pending','Pending Approval'],['approved','Approved'],['auto_approved','Auto-Approved Posts'],['rejected','Rejected'],['all','All Products']].map(([value,label]) => (
+              <button key={value} type="button" onClick={() => { setCurrentPage(1); setFilter(value); setSearchParams(value === 'all' ? {} : { status: value }); }} className={`px-3 sm:px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition ${filter === value ? 'bg-brand-orange text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search and Filters */}
+
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-3 sm:p-4 mb-4 sm:mb-6">
+
           <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
+
             <div className="flex-1 relative">
+
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+
               <input
+
                 type="text"
+
                 placeholder="Search by product name..."
+
                 value={searchInput}
+
                 onChange={(e) => setSearchInput(e.target.value)}
+
                 className="w-full pl-10 pr-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+
               />
+
             </div>
+
             <div className="flex gap-3">
+
               <select
+
                 value={filter}
+
                 onChange={(e) => {
+
                   const next = e.target.value;
+
                   setCurrentPage(1);
+
                   setFilter(next);
+
                   setSearchParams(next === 'all' ? {} : { status: next });
+
                 }}
+
                 className="flex-1 md:flex-none md:w-48 px-3 sm:px-4 py-2.5 text-base border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+
               >
+
                 <option value="pending">Pending Approval</option>
+
                 <option value="approved">Approved</option>
+
                 <option value="rejected">Rejected</option>
+
                 <option value="all">All Products</option>
+
               </select>
+
               <button
+
                 onClick={() => { loadProducts(); loadStats(); }}
+
                 aria-label="Refresh"
+
                 className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 text-gray-700 dark:text-gray-200"
+
               >
+
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+
                 <span className="hidden sm:inline">Refresh</span>
+
               </button>
+
             </div>
+
           </div>
+
         </div>
+
+
 
         {/* Products */}
+
         <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden transition-opacity ${loading ? 'opacity-60' : 'opacity-100'}`}>
 
+
+
           {/* DESKTOP / TABLET (md and up): table */}
+
           <div className="hidden md:block overflow-x-auto">
+
             <table className="w-full">
+
               <thead>
+
                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+
                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Product</th>
+
                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Price</th>
+
                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Seller</th>
+
                   <th className="hidden lg:table-cell text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Category</th>
+
                   <th className="hidden lg:table-cell text-left py-4 px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Submitted</th>
+
                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Status</th>
+
                   <th className="text-left py-4 px-4 lg:px-6 text-sm font-semibold text-gray-600 dark:text-gray-400">Actions</th>
+
                 </tr>
+
               </thead>
+
               <tbody>
+
                 {filteredProducts.map((product) => {
+
                   const imageUrl = product.images && product.images[0] ? getImageUrl(product.images[0]) : null;
+
                   const sellerName = getSellerName(product);
-                  
+
+
+
                   return (
+
                     <tr key={product.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+
                       <td className="py-4 px-4 lg:px-6">
+
                         <div className="flex items-center gap-3 min-w-0">
+
                           {imageUrl ? (
+
                             <img 
+
                               src={imageUrl}
+
                               alt={product.title}
+
                               className="w-12 h-12 rounded-lg object-cover shrink-0"
+
                               onError={(e) => {
+
                                 e.target.src = 'https://via.placeholder.com/48x48?text=No+Image';
+
                               }}
+
                             />
+
                           ) : (
+
                             <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+
                               <Image className="h-6 w-6 text-gray-400" />
+
                             </div>
+
                           )}
+
                           <div className="min-w-0 max-w-[220px] lg:max-w-xs">
+
                             <p className="font-medium text-gray-900 dark:text-white truncate">{product.title}</p>
+
                             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{product.description?.substring(0, 60)}...</p>
+
                           </div>
+
                         </div>
+
                       </td>
+
                       <td className="py-4 px-4 lg:px-6">
+
                         <span className="font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+
                           {formatCurrency(product.price)}
+
                         </span>
+
                       </td>
+
                       <td className="py-4 px-4 lg:px-6">
+
                         <div className="flex items-center gap-2">
+
                           <User className="h-4 w-4 text-gray-400 shrink-0" />
+
                           <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[120px]">
+
                             {sellerName}
+
                           </span>
+
                         </div>
+
                       </td>
+
                       <td className="hidden lg:table-cell py-4 px-6">
+
                         <span className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+
                           {product.category}
+
                         </span>
+
                       </td>
+
                       <td className="hidden lg:table-cell py-4 px-6">
+
                         <span className="text-sm text-gray-500 dark:text-gray-400">
+
                           {formatDate(product.created_at)}
+
                         </span>
+
                       </td>
+
                       <td className="py-4 px-4 lg:px-6">
-                        {getStatusBadge(product.status)}
+
+                        {product.approval_type === 'auto' && product.status === 'approved' ? <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-700 whitespace-nowrap"><Zap className="h-3 w-3 mr-1" />Auto-Approved</span> : getStatusBadge(product.status)}
+
                       </td>
+
                       <td className="py-4 px-4 lg:px-6">
+
                         <div className="flex items-center gap-1">
+
                           <button
+
                             onClick={() => openDetails(product)}
+
                             className="p-2 text-blue-500 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+
                             title="View Details"
+
                             aria-label="View details"
+
                           >
+
                             <Eye className="h-4 w-4" />
+
                           </button>
+
                           {product.status === 'pending' && (
+
                             <>
+
                               <button
+
                                 onClick={() => handleApproveProduct(product)}
+
                                 className="p-2 text-green-500 hover:text-green-600 rounded-lg hover:bg-green-50"
+
                                 title="Approve"
+
                                 aria-label="Approve"
+
                               >
+
                                 <CheckCircle className="h-4 w-4" />
+
                               </button>
+
                               <button
+
                                 onClick={() => openReject(product)}
+
                                 className="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50"
+
                                 title="Reject"
+
                                 aria-label="Reject"
+
                               >
+
                                 <XCircle className="h-4 w-4" />
+
                               </button>
+
                             </>
+
                           )}
+
                         </div>
+
                       </td>
+
                     </tr>
+
                   );
+
                 })}
+
               </tbody>
+
             </table>
+
           </div>
+
+
 
           {/* PHONES (below md): card list */}
+
           <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+
             {filteredProducts.map((product) => {
+
               const imageUrl = product.images && product.images[0] ? getImageUrl(product.images[0]) : null;
+
               const sellerName = getSellerName(product);
 
+
+
               return (
+
                 <div key={product.id} className="p-4">
+
                   <div className="flex gap-3">
+
                     {imageUrl ? (
+
                       <img
+
                         src={imageUrl}
+
                         alt={product.title}
+
                         className="w-16 h-16 rounded-lg object-cover shrink-0"
+
                         onError={(e) => {
+
                           e.target.src = 'https://via.placeholder.com/64x64?text=No+Image';
+
                         }}
+
                       />
+
                     ) : (
+
                       <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+
                         <Image className="h-6 w-6 text-gray-400" />
+
                       </div>
+
                     )}
+
                     <div className="min-w-0 flex-1">
+
                       <p className="font-medium text-gray-900 dark:text-white break-words">{product.title}</p>
+
                       <p className="text-sm text-gray-500 dark:text-gray-400 break-words">
+
                         {product.description?.substring(0, 70)}{product.description?.length > 70 ? '...' : ''}
+
                       </p>
+
                     </div>
+
                   </div>
+
+
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
+
                     <span className="font-semibold text-gray-900 dark:text-white">
+
                       {formatCurrency(product.price)}
+
                     </span>
+
                     {getStatusBadge(product.status)}
+
                     {product.category && (
+
                       <span className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+
                         {product.category}
+
                       </span>
+
                     )}
+
                   </div>
+
+
 
                   <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+
                     <span className="flex items-center gap-1 min-w-0">
+
                       <User className="h-3.5 w-3.5 shrink-0" />
+
                       <span className="truncate">{sellerName}</span>
+
                     </span>
+
                     <span className="shrink-0">{formatDate(product.created_at)}</span>
+
                   </div>
+
+
 
                   <div className="mt-3 flex gap-2">
+
                     <button
+
                       onClick={() => openDetails(product)}
+
                       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-900/20"
+
                     >
+
                       <Eye className="h-4 w-4" />
+
                       View
+
                     </button>
+
                     {product.status === 'pending' && (
+
                       <>
+
                         <button
+
                           onClick={() => handleApproveProduct(product)}
+
                           className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl bg-green-500 text-white hover:bg-green-600"
+
                         >
+
                           <CheckCircle className="h-4 w-4" />
+
                           Approve
+
                         </button>
+
                         <button
+
                           onClick={() => openReject(product)}
+
                           className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl bg-red-500 text-white hover:bg-red-600"
+
                         >
+
                           <XCircle className="h-4 w-4" />
+
                           Reject
+
                         </button>
+
                       </>
+
                     )}
+
                   </div>
+
                 </div>
+
               );
+
             })}
+
           </div>
-          
+
+
+
           {filteredProducts.length === 0 && (
+
             <div className="text-center py-12">
+
               <Tag className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+
               <p className="text-gray-500 dark:text-gray-400">No products found</p>
+
             </div>
+
           )}
+
+
 
           {/* Pagination */}
+
           {totalPages > 1 && (
+
             <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3 py-4 px-3 border-t border-gray-200 dark:border-gray-700">
+
               <button
+
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+
                 disabled={currentPage === 1}
+
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-50"
+
               >
+
                 <ChevronLeft className="h-4 w-4" />
+
                 Previous
+
               </button>
+
               <span className="text-sm text-gray-600 dark:text-gray-400">
+
                 Page {currentPage} of {totalPages}
+
               </span>
+
               <button
+
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+
                 disabled={currentPage === totalPages}
+
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-50"
+
               >
+
                 Next
+
                 <ChevronRight className="h-4 w-4" />
+
               </button>
+
             </div>
+
           )}
+
         </div>
+
       </div>
 
+
+
       {/* Product Details Modal (slides up from the bottom on phones) */}
+
       {showProductModal && selectedProduct && (
+
         <div
+
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4"
+
           onClick={() => setShowProductModal(false)}
+
         >
+
           <div
+
             className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto"
+
             style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+
             onClick={(e) => e.stopPropagation()}
+
           >
+
             <div className="flex justify-between items-center mb-4 gap-3">
+
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Product Details</h2>
+
               <button
+
                 onClick={() => setShowProductModal(false)}
+
                 aria-label="Close"
+
                 className="p-2 -mr-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 rounded-lg"
+
               >
+
                 <X className="h-5 w-5" />
+
               </button>
+
             </div>
-            
+
+
+
             <div className="space-y-4">
+
               {/* Product Images */}
+
               {selectedProduct.images && selectedProduct.images.length > 0 && (
+
                 <div className="flex gap-2 overflow-x-auto pb-1">
+
                   {selectedProduct.images.map((img, idx) => (
+
                     <img 
+
                       key={idx} 
+
                       src={getImageUrl(img)} 
+
                       alt="" 
+
                       className="w-24 h-24 rounded-lg object-cover shrink-0"
+
                       onError={(e) => {
+
                         e.target.src = 'https://via.placeholder.com/96x96?text=No+Image';
+
                       }}
+
                     />
+
                   ))}
+
                 </div>
+
               )}
-              
+
+
+
               {/* Product Info */}
+
               <div>
+
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white break-words">{selectedProduct.title}</h3>
+
                 <p className="text-gray-600 dark:text-gray-400 mt-1 break-words">{selectedProduct.description}</p>
+
               </div>
-              
+
+
+
               {/* Seller Info in Modal */}
+
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+
                 <p className="text-sm text-gray-500 dark:text-gray-400">Seller Information</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <User className="h-4 w-4 text-brand-orange shrink-0" />
-                  <span className="text-gray-900 dark:text-white font-medium break-words">
-                    {getSellerName(selectedProduct)}
-                  </span>
+
+                <div className="space-y-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-brand-orange shrink-0" />
+                    <span className="text-gray-900 dark:text-white font-medium break-words">
+                      {getSellerName(selectedProduct)}
+                    </span>
+                  </div>
+                  {selectedProduct.seller?.email && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 break-all">Email: {selectedProduct.seller.email}</p>
+                  )}
+                  {selectedProduct.seller?.phone && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Phone: {selectedProduct.seller.phone}</p>
+                  )}
                 </div>
+
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Price</p>
-                  <p className="text-lg font-bold text-brand-orange">{formatCurrency(selectedProduct.price)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Category</p>
-                  <p className="text-gray-900 dark:text-white break-words">{selectedProduct.category}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Condition</p>
-                  <p className="text-gray-900 dark:text-white">{selectedProduct.condition || 'New'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Stock</p>
-                  <p className="text-gray-900 dark:text-white">{selectedProduct.stock_qty || 0} units</p>
-                </div>
+
+
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button type="button" onClick={() => handleViewProfile(selectedProduct)} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"><User className="h-4 w-4" />View Profile</button>
+                {(selectedProduct.status === 'approved' || selectedProduct.approval_type === 'auto') && (
+                  <button type="button" onClick={() => handleDeleteProduct(selectedProduct)} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white"><X className="h-4 w-4" />Delete Post</button>
+                )}
               </div>
-              
-              {selectedProduct.status === 'pending' && (
-                <div className="flex flex-col sm:flex-row gap-3 pt-2 sm:pt-4">
-                  <button
-                    onClick={() => {
-                      handleApproveProduct(selectedProduct);
-                      setShowProductModal(false);
-                    }}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl"
-                  >
-                    Approve Product
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProductModal(false);
-                      setSelectedProduct(selectedProduct);
-                      setShowRejectModal(true);
-                    }}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl"
-                  >
-                    Reject Product
-                  </button>
+
+              {(selectedProduct.rejection_reason || selectedProduct.approval_reason) && (
+                <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-900/20 p-3">
+                  <p className="text-xs font-semibold text-red-700 dark:text-red-300">Rejection / Review Reason</p>
+                  <p className="text-sm text-red-800 dark:text-red-200 mt-1 break-words">{selectedProduct.rejection_reason || selectedProduct.approval_reason}</p>
                 </div>
               )}
+
+              <div className="grid grid-cols-2 gap-4">
+
+                <div>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Price</p>
+
+                  <p className="text-lg font-bold text-brand-orange">{formatCurrency(selectedProduct.price)}</p>
+
+                </div>
+
+                <div>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Category</p>
+
+                  <p className="text-gray-900 dark:text-white break-words">{selectedProduct.category}</p>
+
+                </div>
+
+                <div>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Condition</p>
+
+                  <p className="text-gray-900 dark:text-white">{selectedProduct.condition || 'New'}</p>
+
+                </div>
+
+                <div>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Stock</p>
+
+                  <p className="text-gray-900 dark:text-white">{selectedProduct.stock_qty || 0} units</p>
+
+                </div>
+
+              </div>
+
+
+
+              {selectedProduct.status === 'pending' && (
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2 sm:pt-4">
+
+                  <button
+
+                    onClick={() => {
+
+                      handleApproveProduct(selectedProduct);
+
+                      setShowProductModal(false);
+
+                    }}
+
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl"
+
+                  >
+
+                    Approve Product
+
+                  </button>
+
+                  <button
+
+                    onClick={() => {
+
+                      setShowProductModal(false);
+
+                      setSelectedProduct(selectedProduct);
+
+                      setShowRejectModal(true);
+
+                    }}
+
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl"
+
+                  >
+
+                    Reject Product
+
+                  </button>
+
+                </div>
+
+              )}
+
             </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+
+      {/* Reject Modal (slides up from the bottom on phones) */}
+
+      {showSellerModal && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 sm:p-4" onClick={() => setShowSellerModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <div><h2 className="text-xl font-bold text-gray-900 dark:text-white">Seller Profile</h2><p className="text-sm text-gray-500 dark:text-gray-400">Admin-only seller information and listing history</p></div>
+              <button onClick={() => setShowSellerModal(false)} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+            </div>
+            {sellerLoading ? (
+              <div className="py-12 flex justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-orange" /></div>
+            ) : selectedSeller ? (
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[["Name", selectedSeller.name || selectedSeller.username || 'Unknown'],["Email", selectedSeller.email || '—'],["Phone", selectedSeller.phone || '—'],["Join date", selectedSeller.join_date ? formatDate(selectedSeller.join_date) : '—'],["Total posts", selectedSeller.total_posts ?? 0],["Rejected / flagged", `${selectedSeller.rejected_posts ?? 0} / ${selectedSeller.flagged_posts ?? 0}`]].map(([label,value]) => <div key={label} className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4"><p className="text-xs text-gray-500 dark:text-gray-400">{label}</p><p className="font-semibold text-gray-900 dark:text-white mt-1 break-words">{value}</p></div>)}
+                </div>
+                {(selectedSeller.rejected?.length > 0 || selectedSeller.flagged?.length > 0) && <div><h3 className="font-semibold text-gray-900 dark:text-white mb-2">Past rejected / flagged posts</h3><div className="space-y-2">{[...(selectedSeller.rejected || []), ...(selectedSeller.flagged || [])].map(item => <div key={item.id} className="border border-gray-200 dark:border-gray-700 rounded-xl p-3"><p className="font-medium text-gray-900 dark:text-white">{item.title}</p>{item.reason && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{item.reason}</p>}</div>)}</div></div>}
+                <div><h3 className="font-semibold text-gray-900 dark:text-white mb-2">Other posts</h3><div className="space-y-2">{(selectedSeller.other_posts || []).map(item => <div key={item.id} className="flex items-center justify-between gap-3 border border-gray-200 dark:border-gray-700 rounded-xl p-3"><span className="font-medium text-gray-900 dark:text-white truncate">{item.title}</span>{getStatusBadge(item.status)}</div>)}{!selectedSeller.other_posts?.length && <p className="text-sm text-gray-500 dark:text-gray-400">No other posts found.</p>}</div></div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
 
-      {/* Reject Modal (slides up from the bottom on phones) */}
       {showRejectModal && selectedProduct && (
+
         <div
+
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4"
+
           onClick={() => setShowRejectModal(false)}
+
         >
+
           <div
+
             className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 w-full sm:max-w-md max-h-[92vh] overflow-y-auto"
+
             style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+
             onClick={(e) => e.stopPropagation()}
+
           >
+
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Reject Product</h2>
+
             <p className="text-gray-600 dark:text-gray-400 mb-4 break-words">
+
               Reject "{selectedProduct.title}"?
+
             </p>
+
             <div>
+
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Reason (Optional)
+
+                Reason <span className="text-red-500">*</span>
+
               </label>
+
               <textarea
+
                 value={rejectReason}
+
                 onChange={(e) => setRejectReason(e.target.value)}
+
                 rows="3"
+
                 className="w-full px-4 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Enter reason for rejection..."
+
+                placeholder="Explain clearly why this post is being rejected..."
+                required
+
               />
+
             </div>
+
             <div className="flex flex-col-reverse sm:flex-row gap-3 mt-5 sm:mt-6">
+
               <button
+
                 onClick={() => setShowRejectModal(false)}
+
                 className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl"
+
               >
+
                 Cancel
+
               </button>
+
               <button
+
                 onClick={handleRejectProduct}
-                className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl"
+
+                disabled={!rejectReason.trim()}
+
+                className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl"
+
               >
+
                 Reject Product
+
               </button>
+
             </div>
+
           </div>
+
         </div>
+
       )}
+
     </div>
+
   );
+
 };
+
+
 
 export default AdminProducts;
