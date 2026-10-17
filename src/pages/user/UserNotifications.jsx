@@ -123,6 +123,7 @@
 
 // export default UserNotifications;
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { notificationsService } from '../../services/notifications';
 import { Bell, CheckCircle, XCircle, Clock, Trash2, Package, Wallet, Crown, ShieldCheck } from 'lucide-react';
 
@@ -146,6 +147,11 @@ const TAB_ORDER = ['approved', 'rejected', 'pending', 'deleted', 'order', 'payou
 // Fallback if the backend has not been updated yet (no `category` field).
 const guessCategory = (n) => {
   const key = `${n.type || ''} ${n.data?.event || ''}`.toLowerCase();
+  const event = String(n.data?.event || '').toLowerCase();
+  if (event.startsWith('product_')) {
+    const states = { approved: 'approved', rejected: 'rejected', deleted: 'deleted', removed: 'deleted', pending: 'pending', pending_review: 'pending', processing: 'pending', submitted: 'pending' };
+    if (states[event.slice(8)]) return states[event.slice(8)];
+  }
   const blob = `${key} ${n.title || ''} ${n.message || n.body || ''}`.toLowerCase();
   if (key.includes('payout')) return 'payout';
   if (key.includes('premium')) return 'premium';
@@ -160,10 +166,33 @@ const guessCategory = (n) => {
 
 const getCategory = (n) => n.category || guessCategory(n);
 
+// Where a notification should take the user when it is clicked.
+const getTarget = (n) => {
+  const d = n.data || {};
+  const event = String(d.event || '').toLowerCase();
+
+  if (n.type === 'admin_activity') return null;
+
+  if (event === 'product_approved' && d.product_id) {
+    return { to: `/product/${d.product_id}`, label: 'View product' };
+  }
+  if (event.startsWith('product_') && event !== 'product_deleted') {
+    return { to: '/dashboard/listings', label: 'View my listings' };
+  }
+  if (d.order_id) {
+    return { to: `/dashboard/orders/${d.order_id}`, label: 'View order' };
+  }
+  if (event.startsWith('payout')) {
+    return { to: '/dashboard/sales', label: 'View sales' };
+  }
+  return null;
+};
+
 const UserNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadNotifications();
@@ -212,6 +241,12 @@ const UserNotifications = () => {
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
     }
+  };
+
+  const handleOpen = (notif) => {
+    markAsRead(notif);
+    const target = getTarget(notif);
+    if (target) navigate(target.to);
   };
 
   const counts = useMemo(() => {
@@ -320,21 +355,32 @@ const UserNotifications = () => {
                 const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.other;
                 const Icon = style.icon;
                 const text = notif.message || notif.body || '';
+                const target = getTarget(notif);
 
                 return (
                   <div
                     key={notif.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => markAsRead(notif)}
-                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && markAsRead(notif)}
+                    onClick={() => handleOpen(notif)}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleOpen(notif)}
                     className={`bg-gray-900 rounded-xl p-4 border hover:bg-gray-800 transition cursor-pointer ${
                       notif.is_read ? 'border-gray-800' : 'border-brand-orange/50'
                     }`}
                   >
                     <div className="flex gap-3">
                       <div className="flex-shrink-0 pt-0.5">
-                        <Icon className={`h-5 w-5 ${style.iconClass}`} />
+                        {notif.data?.product_image ? (
+                          <img
+                            src={notif.data.product_image}
+                            alt={notif.data.product_title || 'Product'}
+                            className="h-16 w-16 rounded-lg object-cover bg-gray-800"
+                            loading="lazy"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <Icon className={`h-5 w-5 ${style.iconClass}`} />
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -354,6 +400,26 @@ const UserNotifications = () => {
 
                         {text && text !== notif.title && (
                           <p className="text-gray-300 text-sm mt-1">{text}</p>
+                        )}
+
+                        {notif.data?.product_title && (
+                          <div className="flex items-center gap-3 mt-2 text-sm">
+                            <span className="text-gray-100 font-medium truncate">{notif.data.product_title}</span>
+                            {notif.data.price != null && (
+                              <span className="text-gray-400">₦{Number(notif.data.price).toLocaleString()}</span>
+                            )}
+                            {notif.data.category && (
+                              <span className="text-gray-500">{notif.data.category}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {notif.data?.reason && (
+                          <p className="text-sm text-red-300 mt-1">Reason: {notif.data.reason}</p>
+                        )}
+
+                        {target && (
+                          <p className="text-sm text-brand-orange mt-2">{target.label}</p>
                         )}
 
                         <div className="flex items-center gap-2 mt-2">
