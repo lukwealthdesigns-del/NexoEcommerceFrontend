@@ -1,43 +1,67 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-/* Your custom styles below */
+@import "tailwindcss";
+
+/* Keep dark mode controlled by the .dark class */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Nexoleolite brand colors */
+@theme {
+  --color-brand-orange: #FF6B35;
+  --color-brand-green: #00D9A3;
+  --color-brand-dark: #2D3436;
+  --color-brand-light: #F5F5F5;
+}
+
+/* Base styles */
 @layer base {
   body {
-    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-white;
+    @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-white;
   }
 }
 
+/* Reusable components */
 @layer components {
   .btn-primary {
-    @apply bg-brand-orange text-white rounded-xl px-6 py-2 font-semibold transition-all hover:bg-opacity-90;
+    @apply rounded-xl px-6 py-2 font-semibold text-white transition-all;
+    background-color: var(--color-brand-orange);
   }
-  
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
   .btn-secondary {
-    @apply border-2 border-brand-orange text-brand-orange rounded-xl px-6 py-2 font-semibold transition-all hover:bg-brand-orange hover:text-white;
+    @apply rounded-xl border-2 px-6 py-2 font-semibold transition-all;
+    color: var(--color-brand-orange);
+    border-color: var(--color-brand-orange);
   }
-  
+
+  .btn-secondary:hover {
+    background-color: var(--color-brand-orange);
+    color: white;
+  }
+
   .input-field {
-    @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent bg-white dark:bg-gray-800;
+    @apply w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-800;
+    --tw-ring-color: var(--color-brand-orange);
   }
 }
 
+/* Animations */
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
   }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
