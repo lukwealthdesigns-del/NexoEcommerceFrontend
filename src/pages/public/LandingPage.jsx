@@ -15,6 +15,10 @@
 //   const { user, isAuthenticated } = useAuthStore();
 //   const [featuredProducts, setFeaturedProducts] = useState([]);
 //   const [trendingProducts, setTrendingProducts] = useState([]);
+//   // Products sorted strictly by creation date — this is what guarantees
+//   // newly posted items actually show up on the landing page, independent
+//   // of whatever "featured" or "trending" flags the backend uses.
+//   const [newArrivals, setNewArrivals] = useState([]);
 //   const [topSellers, setTopSellers] = useState([]);
 //   const [searchQuery, setSearchQuery] = useState('');
 //   const [selectedCategory, setSelectedCategory] = useState('');
@@ -226,10 +230,14 @@
 //   const loadProducts = async () => {
 //     setLoading(true);
 //     try {
-//       // allSettled so one failing endpoint doesn't kill the other
-//       const [featuredRes, trendingRes] = await Promise.allSettled([
+//       // allSettled so one failing endpoint doesn't kill the others.
+//       // New Arrivals uses the same "newest" sort as the Shop page's
+//       // products endpoint, so it reflects what was actually just posted —
+//       // unlike Featured/Trending, which depend on separate backend flags.
+//       const [featuredRes, trendingRes, newArrivalsRes] = await Promise.allSettled([
 //         productsService.getFeaturedProducts(),
 //         productsService.getTrendingProducts(),
+//         productsService.getProducts({ sort: 'newest', limit: 8 }),
 //       ]);
 
 //       const featured =
@@ -242,17 +250,29 @@
 //           ? trendingRes.value
 //           : [];
 
+//       // getProducts can return a raw array or a wrapped { products } / { data } shape,
+//       // same as on the Shop page — normalize it the same way here.
+//       let newest = [];
+//       if (newArrivalsRes.status === 'fulfilled') {
+//         const res = newArrivalsRes.value;
+//         if (Array.isArray(res)) newest = res;
+//         else if (res?.products) newest = res.products;
+//         else if (res?.data) newest = res.data;
+//       }
+
 //       // Fallback to mock data if backend returned nothing or errored
 //       setFeaturedProducts(featured.length ? featured : mockProducts);
 //       setTrendingProducts(
 //         trending.length ? trending : [...mockProducts].reverse()
 //       );
+//       setNewArrivals(newest.length ? newest : mockProducts);
 //       setTopSellers(mockSellers);
 //     } catch (error) {
 //       console.error('Failed to load products', error);
 //       // Fallback so the page never gets stuck
 //       setFeaturedProducts(mockProducts);
 //       setTrendingProducts([...mockProducts].reverse());
+//       setNewArrivals(mockProducts);
 //       setTopSellers(mockSellers);
 //     } finally {
 //       setLoading(false);
@@ -450,6 +470,24 @@
 //         </div> 
 //       </section> 
  
+//       {/* New Arrivals — sorted strictly by newest first, so a product 
+//           someone just posted always shows up here immediately */} 
+//       <section className="py-16 bg-gray-50 dark:bg-gray-800/50"> 
+//         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+//           <div className="flex justify-between items-center mb-8"> 
+//             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">New Arrivals</h2> 
+//             <Link to="/shop?sort=newest" className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"> 
+//               View All <ChevronRight className="h-4 w-4" /> 
+//             </Link> 
+//           </div> 
+//           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"> 
+//             {newArrivals.slice(0, 8).map((product) => ( 
+//               <ProductCard key={product.id} product={product} /> 
+//             ))} 
+//           </div> 
+//         </div> 
+//       </section> 
+ 
 //       {/* Trending Products */} 
 //       <section className="py-16"> 
 //         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
@@ -519,12 +557,23 @@
 // }; 
  
 // export default LandingPage;
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Search, MapPin, Star, TrendingUp, ChevronRight, 
-  ShoppingBag, ArrowRight, Zap, Shield, Truck, Heart
+import {
+  Search,
+  MapPin,
+  Star,
+  TrendingUp,
+  ChevronRight,
+  ShoppingBag,
+  ArrowRight,
+  Zap,
+  Shield,
+  Truck,
+  Heart,
 } from 'lucide-react';
+
 import ProductCard from '../../components/ui/ProductCard';
 import AdsCarousel from '../../components/common/AdsCarousel';
 import { productsService } from '../../services/products';
@@ -533,18 +582,18 @@ import { useAuthStore } from '../../store/authStore';
 const LandingPage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
+
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [promotedProducts, setPromotedProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
-  // Products sorted strictly by creation date — this is what guarantees
-  // newly posted items actually show up on the landing page, independent
-  // of whatever "featured" or "trending" flags the backend uses.
   const [newArrivals, setNewArrivals] = useState([]);
   const [topSellers, setTopSellers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(true);
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
 
-  // ========== HERO BACKGROUND SLIDESHOW (E-COMMERCE THEMED) ==========
+  // HERO BACKGROUND SLIDESHOW
   const heroBackgroundImages = [
     'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1920&h=1080&fit=crop',
     'https://images.unsplash.com/photo-1523206489230-c012c64b2b48?w=1920&h=1080&fit=crop',
@@ -554,16 +603,17 @@ const LandingPage = () => {
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1920&h=1080&fit=crop',
   ];
 
-  const [heroImageIndex, setHeroImageIndex] = useState(0);
-
   useEffect(() => {
     const heroInterval = setInterval(() => {
-      setHeroImageIndex(prev => (prev + 1) % heroBackgroundImages.length);
+      setHeroImageIndex(
+        (previous) => (previous + 1) % heroBackgroundImages.length
+      );
     }, 6000);
+
     return () => clearInterval(heroInterval);
   }, []);
 
-  // ========== CATEGORIES WITH REAL RELEVANT IMAGES ==========
+  // CATEGORIES
   const categoriesData = [
     {
       name: 'Electronics',
@@ -573,7 +623,7 @@ const LandingPage = () => {
         'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=150&h=150&fit=crop',
         'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=150&h=150&fit=crop',
       ],
-      alt: 'Electronics'
+      alt: 'Electronics',
     },
     {
       name: 'Fashion',
@@ -583,7 +633,7 @@ const LandingPage = () => {
         'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=150&h=150&fit=crop',
         'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=150&h=150&fit=crop',
       ],
-      alt: 'Fashion'
+      alt: 'Fashion',
     },
     {
       name: 'Home & Garden',
@@ -593,7 +643,7 @@ const LandingPage = () => {
         'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=150&h=150&fit=crop',
         'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=150&h=150&fit=crop',
       ],
-      alt: 'Home & Garden'
+      alt: 'Home and Garden',
     },
     {
       name: 'Beauty',
@@ -603,7 +653,7 @@ const LandingPage = () => {
         'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=150&h=150&fit=crop',
         'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=150&h=150&fit=crop',
       ],
-      alt: 'Beauty'
+      alt: 'Beauty',
     },
     {
       name: 'Sports',
@@ -613,7 +663,7 @@ const LandingPage = () => {
         'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=150&h=150&fit=crop',
         'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=150&h=150&fit=crop',
       ],
-      alt: 'Sports'
+      alt: 'Sports',
     },
     {
       name: 'Food',
@@ -623,7 +673,7 @@ const LandingPage = () => {
         'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop',
         'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=150&h=150&fit=crop',
       ],
-      alt: 'Food'
+      alt: 'Food',
     },
     {
       name: 'Books',
@@ -633,7 +683,7 @@ const LandingPage = () => {
         'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=150&h=150&fit=crop',
         'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=150&h=150&fit=crop',
       ],
-      alt: 'Books'
+      alt: 'Books',
     },
     {
       name: 'Auto',
@@ -643,8 +693,8 @@ const LandingPage = () => {
         'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=150&h=150&fit=crop',
         'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=150&h=150&fit=crop',
       ],
-      alt: 'Auto'
-    }
+      alt: 'Auto',
+    },
   ];
 
   const [categoryImageIndices, setCategoryImageIndices] = useState(() =>
@@ -653,164 +703,287 @@ const LandingPage = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCategoryImageIndices(prev =>
-        prev.map((idx, i) => (idx + 1) % categoriesData[i].images.length)
+      setCategoryImageIndices((previous) =>
+        previous.map(
+          (index, i) => (index + 1) % categoriesData[i].images.length
+        )
       );
     }, 5000);
+
     return () => clearInterval(interval);
   }, []);
 
+  // FEATURES
   const features = [
-    { icon: <Truck className="h-6 w-6" />, title: 'Fast Delivery', desc: 'Same-day delivery in major cities' },
-    { icon: <Shield className="h-6 w-6" />, title: 'Secure Payments', desc: '100% encrypted transactions' },
-    { icon: <Zap className="h-6 w-6" />, title: 'Easy Returns', desc: '30-day money-back guarantee' },
-    { icon: <Heart className="h-6 w-6" />, title: 'Premium Support', desc: '24/7 customer care' },
+    {
+      icon: <Truck className="h-6 w-6" />,
+      title: 'Fast Delivery',
+      desc: 'Convenient delivery options for your orders',
+    },
+    {
+      icon: <Shield className="h-6 w-6" />,
+      title: 'Secure Shopping',
+      desc: 'Shop with confidence on our marketplace',
+    },
+    {
+      icon: <Zap className="h-6 w-6" />,
+      title: 'Easy Shopping',
+      desc: 'Find products that match your needs',
+    },
+    {
+      icon: <Heart className="h-6 w-6" />,
+      title: 'Buyer and Seller Connection',
+      desc: 'Connect with sellers about their products',
+    },
   ];
 
+  // DEMO FALLBACK PRODUCTS
   const mockProducts = [
     {
-      id: 1,
-      title: "iPhone 14 Pro Max",
+      id: 'demo-1',
+      title: 'iPhone 14 Pro Max',
       price: 1200000,
-      category: "Electronics",
-      images: ["https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop"],
-      rating: 4.8, views: 1520, seller_name: "Apple Store NG", likes_count: 45
+      category: 'Electronics',
+      images: [
+        'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop',
+      ],
+      views: 1520,
+      seller_name: 'Apple Store NG',
+      likes_count: 45,
     },
     {
-      id: 2,
-      title: "Nike Air Max 270",
+      id: 'demo-2',
+      title: 'Nike Air Max 270',
       price: 85000,
-      category: "Fashion",
-      images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop"],
-      rating: 4.9, views: 3200, seller_name: "Nike Official", likes_count: 89
+      category: 'Fashion',
+      images: [
+        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop',
+      ],
+      views: 3200,
+      seller_name: 'Nike Official',
+      likes_count: 89,
     },
     {
-      id: 3,
-      title: "Samsung Galaxy S23 Ultra",
+      id: 'demo-3',
+      title: 'Samsung Galaxy S23 Ultra',
       price: 950000,
-      category: "Electronics",
-      images: ["https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop"],
-      rating: 4.7, views: 980, seller_name: "Samsung NG", likes_count: 34
+      category: 'Electronics',
+      images: [
+        'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop',
+      ],
+      views: 980,
+      seller_name: 'Samsung NG',
+      likes_count: 34,
     },
     {
-      id: 4,
-      title: "Sony WH-1000XM5",
+      id: 'demo-4',
+      title: 'Sony WH-1000XM5',
       price: 350000,
-      category: "Electronics",
-      images: ["https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400&h=400&fit=crop"],
-      rating: 4.9, views: 2100, seller_name: "Sony Store", likes_count: 67
+      category: 'Electronics',
+      images: [
+        'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400&h=400&fit=crop',
+      ],
+      views: 2100,
+      seller_name: 'Sony Store',
+      likes_count: 67,
     },
     {
-      id: 5,
-      title: "Gucci Handbag",
+      id: 'demo-5',
+      title: 'Gucci Handbag',
       price: 450000,
-      category: "Fashion",
-      images: ["https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=400&fit=crop"],
-      rating: 4.8, views: 560, seller_name: "Luxury Hub", likes_count: 23
+      category: 'Fashion',
+      images: [
+        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=400&fit=crop',
+      ],
+      views: 560,
+      seller_name: 'Luxury Hub',
+      likes_count: 23,
     },
     {
-      id: 6,
-      title: "Dyson V15 Vacuum",
+      id: 'demo-6',
+      title: 'Dyson V15 Vacuum',
       price: 650000,
-      category: "Home & Garden",
-      images: ["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop"],
-      rating: 4.8, views: 430, seller_name: "Dyson NG", likes_count: 12
+      category: 'Home & Garden',
+      images: [
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop',
+      ],
+      views: 430,
+      seller_name: 'Dyson NG',
+      likes_count: 12,
     },
     {
-      id: 7,
-      title: "MacBook Pro M3",
+      id: 'demo-7',
+      title: 'MacBook Pro M3',
       price: 2500000,
-      category: "Electronics",
-      images: ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop"],
-      rating: 4.9, views: 890, seller_name: "Apple Store NG", likes_count: 56
+      category: 'Electronics',
+      images: [
+        'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop',
+      ],
+      views: 890,
+      seller_name: 'Apple Store NG',
+      likes_count: 56,
     },
     {
-      id: 8,
-      title: "Adidas Ultraboost",
+      id: 'demo-8',
+      title: 'Adidas Ultraboost',
       price: 75000,
-      category: "Fashion",
-      images: ["https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400&h=400&fit=crop"],
-      rating: 4.7, views: 1670, seller_name: "Adidas NG", likes_count: 78
+      category: 'Fashion',
+      images: [
+        'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400&h=400&fit=crop',
+      ],
+      views: 1670,
+      seller_name: 'Adidas NG',
+      likes_count: 78,
     },
   ];
 
   const mockSellers = [
-    { name: "Apple Store NG", rating: 4.9, products: 234, image: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=150&h=150&fit=crop', alt: 'Apple MacBook' },
-    { name: "Nike Official", rating: 4.9, products: 456, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=150&h=150&fit=crop', alt: 'Nike shoes' },
-    { name: "Samsung NG", rating: 4.8, products: 189, image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=150&h=150&fit=crop', alt: 'Samsung phone' },
-    { name: "Sony Store", rating: 4.7, products: 123, image: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=150&h=150&fit=crop', alt: 'Sony headphones' },
-    { name: "Luxury Hub", rating: 4.8, products: 89, image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=150&h=150&fit=crop', alt: 'Luxury bag' },
-    { name: "Dyson NG", rating: 4.6, products: 45, image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=150&h=150&fit=crop', alt: 'Dyson vacuum' },
+    {
+      name: 'Apple Store NG',
+      rating: 4.9,
+      products: 234,
+      image:
+        'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=150&h=150&fit=crop',
+      alt: 'Apple MacBook',
+    },
+    {
+      name: 'Nike Official',
+      rating: 4.9,
+      products: 456,
+      image:
+        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=150&h=150&fit=crop',
+      alt: 'Nike shoes',
+    },
+    {
+      name: 'Samsung NG',
+      rating: 4.8,
+      products: 189,
+      image:
+        'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=150&h=150&fit=crop',
+      alt: 'Samsung phone',
+    },
+    {
+      name: 'Sony Store',
+      rating: 4.7,
+      products: 123,
+      image:
+        'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=150&h=150&fit=crop',
+      alt: 'Sony headphones',
+    },
+    {
+      name: 'Luxury Hub',
+      rating: 4.8,
+      products: 89,
+      image:
+        'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=150&h=150&fit=crop',
+      alt: 'Luxury bag',
+    },
+    {
+      name: 'Dyson NG',
+      rating: 4.6,
+      products: 45,
+      image:
+        'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=150&h=150&fit=crop',
+      alt: 'Dyson vacuum',
+    },
   ];
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  // NORMALIZE API RESPONSE SHAPES
+  const normalizeProducts = (response) => {
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response?.products)) return response.products;
+    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.data?.products)) {
+      return response.data.products;
+    }
+    return [];
+  };
 
-  const loadProducts = async () => {
-    setLoading(true);
-    try {
-      // allSettled so one failing endpoint doesn't kill the others.
-      // New Arrivals uses the same "newest" sort as the Shop page's
-      // products endpoint, so it reflects what was actually just posted —
-      // unlike Featured/Trending, which depend on separate backend flags.
-      const [featuredRes, trendingRes, newArrivalsRes] = await Promise.allSettled([
+  // LOAD HOMEPAGE PRODUCTS
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProducts = async () => {
+      setLoading(true);
+
+      const [
+        featuredRes,
+        promotedRes,
+        trendingRes,
+        newArrivalsRes,
+      ] = await Promise.allSettled([
         productsService.getFeaturedProducts(),
+        productsService.getPromotedProducts(8),
         productsService.getTrendingProducts(),
         productsService.getProducts({ sort: 'newest', limit: 8 }),
       ]);
 
+      if (cancelled) return;
+
       const featured =
-        featuredRes.status === 'fulfilled' && Array.isArray(featuredRes.value)
-          ? featuredRes.value
+        featuredRes.status === 'fulfilled'
+          ? normalizeProducts(featuredRes.value)
+          : [];
+
+      const promoted =
+        promotedRes.status === 'fulfilled'
+          ? normalizeProducts(promotedRes.value)
           : [];
 
       const trending =
-        trendingRes.status === 'fulfilled' && Array.isArray(trendingRes.value)
-          ? trendingRes.value
+        trendingRes.status === 'fulfilled'
+          ? normalizeProducts(trendingRes.value)
           : [];
 
-      // getProducts can return a raw array or a wrapped { products } / { data } shape,
-      // same as on the Shop page — normalize it the same way here.
-      let newest = [];
-      if (newArrivalsRes.status === 'fulfilled') {
-        const res = newArrivalsRes.value;
-        if (Array.isArray(res)) newest = res;
-        else if (res?.products) newest = res.products;
-        else if (res?.data) newest = res.data;
-      }
+      const newest =
+        newArrivalsRes.status === 'fulfilled'
+          ? normalizeProducts(newArrivalsRes.value)
+          : [];
 
-      // Fallback to mock data if backend returned nothing or errored
       setFeaturedProducts(featured.length ? featured : mockProducts);
+
+      // Never insert demo products into promoted products.
+      setPromotedProducts(promoted);
+
       setTrendingProducts(
         trending.length ? trending : [...mockProducts].reverse()
       );
+
       setNewArrivals(newest.length ? newest : mockProducts);
       setTopSellers(mockSellers);
-    } catch (error) {
-      console.error('Failed to load products', error);
-      // Fallback so the page never gets stuck
-      setFeaturedProducts(mockProducts);
-      setTrendingProducts([...mockProducts].reverse());
-      setNewArrivals(mockProducts);
-      setTopSellers(mockSellers);
-    } finally {
       setLoading(false);
+    };
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // SEARCH
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+
+    if (searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    }
+
+    if (selectedCategory) {
+      params.set('category', selectedCategory);
+    }
+
+    const query = params.toString();
+    navigate(query ? `/shop?${query}` : '/shop');
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleSearch();
     }
   };
 
-  const handleSearch = () => {
-    const params = new URLSearchParams();
-    if (searchQuery.trim()) params.append('search', searchQuery.trim());
-    if (selectedCategory) params.append('category', selectedCategory);
-    navigate(`/shop?${params.toString()}`);
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') handleSearch();
-  };
-
-  // Smart "Become a Seller" handler
+  // BECOME A SELLER
   const handleSellerClick = () => {
     if (isAuthenticated || user) {
       navigate('/dashboard/listings');
@@ -821,37 +994,44 @@ const LandingPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-brand-orange border-t-transparent"></div>
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
+        <div
+          className="animate-spin rounded-full h-16 w-16 border-4 border-brand-orange border-t-transparent"
+          role="status"
+          aria-label="Loading products"
+        />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
-      {/* Hero Section */}
+      {/* HERO SECTION */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 z-0">
-          {heroBackgroundImages.map((img, idx) => (
+          {heroBackgroundImages.map((image, index) => (
             <img
-              key={img}
-              src={img}
+              key={image}
+              src={image}
               alt="E-commerce shopping"
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1500ms] ease-in-out ${
-                idx === heroImageIndex ? 'opacity-100' : 'opacity-0'
+                index === heroImageIndex ? 'opacity-100' : 'opacity-0'
               }`}
-              loading={idx === 0 ? 'eager' : 'lazy'}
+              loading={index === 0 ? 'eager' : 'lazy'}
             />
           ))}
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-orange/40 via-black/40 to-black/60 dark:from-brand-orange/50 dark:via-black/60 dark:to-black/80"></div>
+
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-orange/40 via-black/40 to-black/60 dark:from-brand-orange/50 dark:via-black/60 dark:to-black/80" />
         </div>
 
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-          {heroBackgroundImages.map((_, idx) => (
+          {heroBackgroundImages.map((image, index) => (
             <span
-              key={idx}
+              key={image}
               className={`h-1.5 rounded-full transition-all duration-500 ${
-                idx === heroImageIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
+                index === heroImageIndex
+                  ? 'w-6 bg-white'
+                  : 'w-1.5 bg-white/50'
               }`}
             />
           ))}
@@ -860,52 +1040,65 @@ const LandingPage = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg">
-              Buy & Sell Everything{' '}
+              Buy &amp; Sell Everything{' '}
               <span className="text-brand-orange">Anywhere</span>
             </h1>
+
             <p className="text-lg md:text-xl text-gray-100 mb-10 drop-shadow">
-              Join millions of buyers and sellers on NexoLeolite – Africa's fastest growing marketplace
+              Discover products, connect with sellers, and shop on Nexoleolite.
             </p>
-            
+
             <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-2 flex flex-col md:flex-row gap-2">
               <div className="flex-1 flex items-center px-4">
-                <Search className="h-5 w-5 text-gray-400" />
+                <Search className="h-5 w-5 text-gray-400 shrink-0" />
+
                 <input
                   type="text"
                   placeholder="What are you looking for?"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="flex-1 px-3 py-3 outline-none bg-transparent"
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={handleKeyPress}
+                  className="flex-1 min-w-0 px-3 py-3 outline-none bg-transparent text-gray-900 dark:text-white"
                 />
               </div>
+
               <div className="flex items-center px-4">
-                <MapPin className="h-5 w-5 text-gray-400" />
+                <MapPin className="h-5 w-5 text-gray-400 shrink-0" />
+
                 <select
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="flex-1 px-3 py-3 outline-none bg-transparent"
+                  onChange={(event) => setSelectedCategory(event.target.value)}
+                  className="flex-1 px-3 py-3 outline-none bg-transparent text-gray-900 dark:text-white"
                 >
                   <option value="">All Categories</option>
-                  {categoriesData.map(cat => (
-                    <option key={cat.name} value={cat.name}>{cat.name}</option>
+                  {categoriesData.map((category) => (
+                    <option key={category.name} value={category.name}>
+                      {category.name}
+                    </option>
                   ))}
                 </select>
               </div>
-              <button 
+
+              <button
+                type="button"
                 onClick={handleSearch}
                 className="bg-brand-orange text-white px-8 py-3 rounded-xl hover:bg-orange-600 transition font-medium flex items-center justify-center gap-2"
               >
                 Search <ArrowRight className="h-4 w-4" />
               </button>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
-              <Link to="/shop" className="inline-flex items-center justify-center gap-2 bg-brand-orange text-white px-8 py-3 rounded-xl hover:bg-orange-600 transition font-medium">
+              <Link
+                to="/shop"
+                className="inline-flex items-center justify-center gap-2 bg-brand-orange text-white px-8 py-3 rounded-xl hover:bg-orange-600 transition font-medium"
+              >
                 <ShoppingBag className="h-5 w-5" />
                 Shop Now
               </Link>
+
               <button
+                type="button"
                 onClick={handleSellerClick}
                 className="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-3 rounded-xl hover:bg-white hover:text-brand-orange transition font-medium"
               >
@@ -916,164 +1109,254 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* FEATURES */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=600&fit=crop"  
-            alt="Shopping bags and products" 
-            className="w-full h-full object-cover" 
-          /> 
-          <div className="absolute inset-0 bg-white/70 dark:bg-gray-900/70"></div> 
-        </div> 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16"> 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"> 
-            {features.map((feature, idx) => ( 
-              <div key={idx} className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-md backdrop-blur-sm"> 
-                <div className="p-3 bg-brand-orange/10 rounded-full text-brand-orange"> 
-                  {feature.icon} 
-                </div> 
-                <div> 
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{feature.title}</h3> 
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{feature.desc}</p> 
-                </div> 
-              </div> 
-            ))} 
-          </div> 
-        </div> 
-      </section> 
- 
-      {/* Shop by Category */} 
-      <section className="py-16"> 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
-          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12"> 
-            Shop by <span className="text-brand-orange">Category</span> 
-          </h2> 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4"> 
-            {categoriesData.map((category, idx) => ( 
-              <Link 
-                key={category.name} 
-                to={`/shop?category=${category.name}`} 
-                className="group text-center" 
-              > 
-                <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden shadow-md group-hover:scale-105 transition duration-300"> 
-                  <img  
-                    src={category.images[categoryImageIndices[idx]]} 
-                    alt={category.name} 
-                    className="w-full h-full object-cover transition-opacity duration-500" 
-                    loading="lazy" 
-                  /> 
-                </div> 
-                <p className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">{category.name}</p> 
-              </Link> 
-            ))} 
-          </div> 
-        </div> 
-      </section> 
- 
-      <AdsCarousel /> 
- 
-      {/* Featured Products */} 
-      <section className="py-16 bg-gray-50 dark:bg-gray-800/50"> 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
-          <div className="flex justify-between items-center mb-8"> 
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Featured Products</h2> 
-            <Link to="/shop" className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"> 
-              View All <ChevronRight className="h-4 w-4" /> 
-            </Link> 
-          </div> 
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"> 
-            {featuredProducts.slice(0, 8).map((product) => ( 
-              <ProductCard key={product.id} product={product} /> 
-            ))} 
-          </div> 
-        </div> 
-      </section> 
- 
-      {/* New Arrivals — sorted strictly by newest first, so a product 
-          someone just posted always shows up here immediately */} 
-      <section className="py-16 bg-gray-50 dark:bg-gray-800/50"> 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
-          <div className="flex justify-between items-center mb-8"> 
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">New Arrivals</h2> 
-            <Link to="/shop?sort=newest" className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"> 
-              View All <ChevronRight className="h-4 w-4" /> 
-            </Link> 
-          </div> 
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"> 
-            {newArrivals.slice(0, 8).map((product) => ( 
-              <ProductCard key={product.id} product={product} /> 
-            ))} 
-          </div> 
-        </div> 
-      </section> 
- 
-      {/* Trending Products */} 
-      <section className="py-16"> 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
-          <div className="flex justify-between items-center mb-8"> 
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"> 
-              <TrendingUp className="h-6 w-6 text-brand-orange" /> 
-              Trending Now 
-            </h2> 
-            <Link to="/shop?sort=popular" className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"> 
-              View All <ChevronRight className="h-4 w-4" /> 
-            </Link> 
-          </div> 
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"> 
-            {trendingProducts.slice(0, 8).map((product) => ( 
-              <ProductCard key={product.id} product={product} /> 
-            ))} 
-          </div> 
-        </div> 
-      </section> 
- 
-      {/* Top Rated Sellers */} 
-      <section className="py-16 bg-gradient-to-r from-brand-light to-white dark:from-brand-dark/30 dark:to-gray-900"> 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
-          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12"> 
-            Top <span className="text-brand-orange">Rated Sellers</span> 
-          </h2> 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6"> 
-            {topSellers.map((seller, index) => ( 
-              <div key={index} className="text-center group"> 
-                <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden shadow-lg group-hover:scale-105 transition"> 
-                  <img  
-                    src={seller.image}  
-                    alt={seller.alt} 
-                    className="w-full h-full object-cover" 
-                    loading="lazy" 
-                  /> 
-                </div> 
-                <h3 className="mt-3 font-semibold text-gray-900 dark:text-white">{seller.name}</h3> 
-                <div className="flex items-center justify-center mt-1"> 
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" /> 
-                  <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">{seller.rating}</span> 
-                </div> 
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{seller.products}+ products</p> 
-              </div> 
-            ))} 
-          </div> 
-        </div> 
-      </section> 
- 
-      {/* CTA Banner */} 
-      <section className="bg-gradient-to-br from-brand-orange/20 via-brand-light/30 to-white dark:from-brand-orange/30 dark:via-brand-dark/50 dark:to-gray-900 py-20"> 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center"> 
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">Ready to Start Selling?</h2> 
-          <p className="text-gray-600 dark:text-gray-300 text-lg mb-8 max-w-2xl mx-auto"> 
-            Join thousands of successful sellers on NexoLeolite and grow your business 
-          </p> 
+          <img
+            src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=600&fit=crop"
+            alt="Shopping bags and products"
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-white/70 dark:bg-gray-900/70" />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-md backdrop-blur-sm"
+              >
+                <div className="p-3 bg-brand-orange/10 rounded-full text-brand-orange">
+                  {feature.icon}
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {feature.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SHOP BY CATEGORY */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">
+            Shop by <span className="text-brand-orange">Category</span>
+          </h2>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            {categoriesData.map((category, index) => (
+              <Link
+                key={category.name}
+                to={`/shop?category=${encodeURIComponent(category.name)}`}
+                className="group text-center"
+              >
+                <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden shadow-md group-hover:scale-105 transition duration-300">
+                  <img
+                    src={category.images[categoryImageIndices[index]]}
+                    alt={category.alt}
+                    className="w-full h-full object-cover transition-opacity duration-500"
+                    loading="lazy"
+                  />
+                </div>
+
+                <p className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {category.name}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ADVERTISEMENTS */}
+      <AdsCarousel />
+
+      {/* PROMOTED PRODUCTS */}
+      {promotedProducts.length > 0 && (
+        <section className="py-16 bg-orange-50/70 dark:bg-gray-800/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center gap-4 mb-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Zap className="h-6 w-6 text-brand-orange" />
+                  Promoted Products
+                </h2>
+
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Products sellers are promoting on Nexoleolite.
+                </p>
+              </div>
+
+              {/* FIX: Navigate to the Shop page in boosted-products mode */}
+              <Link
+                to="/shop?boosted=true"
+                className="text-brand-orange flex items-center gap-1 hover:gap-2 transition shrink-0"
+              >
+                View All <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {promotedProducts.slice(0, 8).map((product) => (
+                <div key={product.id} className="relative min-w-0">
+                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-full bg-brand-orange px-3 py-1 text-xs font-semibold text-white shadow">
+                    <Zap className="h-3 w-3" />
+                    Promoted
+                  </span>
+
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* FEATURED PRODUCTS */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Featured Products
+            </h2>
+
+            <Link
+              to="/shop"
+              className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"
+            >
+              View All <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {featuredProducts.slice(0, 8).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* NEW ARRIVALS */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              New Arrivals
+            </h2>
+
+            <Link
+              to="/shop?sort=newest"
+              className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"
+            >
+              View All <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {newArrivals.slice(0, 8).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TRENDING PRODUCTS */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <TrendingUp className="h-6 w-6 text-brand-orange" />
+              Trending Now
+            </h2>
+
+            <Link
+              to="/shop?sort=popular"
+              className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"
+            >
+              View All <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {trendingProducts.slice(0, 8).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TOP RATED SELLERS */}
+      <section className="py-16 bg-gradient-to-r from-brand-light to-white dark:from-brand-dark/30 dark:to-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">
+            Top <span className="text-brand-orange">Rated Sellers</span>
+          </h2>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {topSellers.map((seller, index) => (
+              <div key={seller.name || index} className="text-center group">
+                <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden shadow-lg group-hover:scale-105 transition">
+                  <img
+                    src={seller.image}
+                    alt={seller.alt}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+
+                <h3 className="mt-3 font-semibold text-gray-900 dark:text-white">
+                  {seller.name}
+                </h3>
+
+                <div className="flex items-center justify-center mt-1">
+                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">
+                    {seller.rating}
+                  </span>
+                </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {seller.products}+ products
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SELLER CALL TO ACTION */}
+      <section className="bg-gradient-to-br from-brand-orange/20 via-brand-light/30 to-white dark:from-brand-orange/30 dark:via-brand-dark/50 dark:to-gray-900 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Ready to Start Selling?
+          </h2>
+
+          <p className="text-gray-600 dark:text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
+            Join Nexoleolite, showcase your products, connect with buyers, and
+            grow your business.
+          </p>
+
           <button
+            type="button"
             onClick={handleSellerClick}
             className="inline-flex items-center gap-2 bg-brand-orange text-white px-8 py-3 rounded-xl font-semibold hover:bg-orange-600 transition shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          > 
-            Become a Seller <ArrowRight className="h-4 w-4" /> 
-          </button> 
-        </div> 
-      </section> 
-    </div> 
-  ); 
-}; 
- 
+          >
+            Become a Seller <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+};
+
 export default LandingPage;
