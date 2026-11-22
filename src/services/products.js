@@ -1,5 +1,6 @@
 
 
+
 // import api from './api';
 
 // export const productsService = {
@@ -8,40 +9,80 @@
 //   // ─────────────────────────────────────────────────────────────
 
 //   async getProducts(params = {}) {
-//     const limit = Number(params.limit) || 20;
+//     // Do not automatically limit the Shop to 20 products.
+//     // If a limit is explicitly provided, respect it.
+//     const hasExplicitLimit =
+//       params.limit !== undefined &&
+//       params.limit !== null &&
+//       params.limit !== '';
 
-//     // Compute skip safely: prefer explicit skip, fall back to page math, else 0.
+//     const limit = hasExplicitLimit
+//       ? Math.max(1, Math.min(1000, Number(params.limit) || 100))
+//       : undefined;
+
+//     // Compute skip safely.
 //     let skip = 0;
 
-//     if (Number.isFinite(params.skip)) {
-//       skip = params.skip;
-//     } else if (Number.isFinite(params.page) && params.page > 0) {
-//       skip = (params.page - 1) * limit;
+//     if (
+//       params.skip !== undefined &&
+//       params.skip !== null &&
+//       Number.isFinite(Number(params.skip))
+//     ) {
+//       skip = Math.max(0, Number(params.skip));
+//     } else if (
+//       Number.isFinite(Number(params.page)) &&
+//       Number(params.page) > 0 &&
+//       limit !== undefined
+//     ) {
+//       skip = (Number(params.page) - 1) * limit;
 //     }
 
-//     // Coerce numeric params and drop anything that isn't a finite number.
-//     const toNumber = (v) => {
-//       if (v === '' || v === null || v === undefined) {
+//     // Coerce numeric filter values safely.
+//     const toNumber = (value) => {
+//       if (
+//         value === '' ||
+//         value === null ||
+//         value === undefined
+//       ) {
 //         return undefined;
 //       }
 
-//       const n = Number(v);
-//       return Number.isFinite(n) && n >= 0 ? n : undefined;
+//       const number = Number(value);
+
+//       return Number.isFinite(number) && number >= 0
+//         ? number
+//         : undefined;
 //     };
 
-//     const minPrice = toNumber(params.minPrice ?? params.min_price);
-//     const maxPrice = toNumber(params.maxPrice ?? params.max_price);
+//     const minPrice = toNumber(
+//       params.minPrice ?? params.min_price
+//     );
+
+//     const maxPrice = toNumber(
+//       params.maxPrice ?? params.max_price
+//     );
+
+//     const searchValue = params.search ?? params.q;
+//     const search = typeof searchValue === 'string'
+//       ? searchValue.trim()
+//       : '';
 
 //     const backendParams = {
 //       skip,
-//       limit,
-//       ...(params.category ? { category: params.category } : {}),
-//       ...(params.search || params.q
-//         ? { search: (params.search || params.q).trim() }
+//       ...(limit !== undefined ? { limit } : {}),
+//       ...(params.category
+//         ? { category: params.category }
 //         : {}),
-//       ...(minPrice !== undefined ? { min_price: minPrice } : {}),
-//       ...(maxPrice !== undefined ? { max_price: maxPrice } : {}),
-//       ...(params.condition ? { condition: params.condition } : {}),
+//       ...(search ? { search } : {}),
+//       ...(minPrice !== undefined
+//         ? { min_price: minPrice }
+//         : {}),
+//       ...(maxPrice !== undefined
+//         ? { max_price: maxPrice }
+//         : {}),
+//       ...(params.condition
+//         ? { condition: params.condition }
+//         : {}),
 //       sort: params.sort || 'newest',
 //     };
 
@@ -76,7 +117,10 @@
 //           }
 //         } else if (key === 'video' && productData.video) {
 //           formData.append('video', productData.video);
-//         } else {
+//         } else if (
+//           productData[key] !== undefined &&
+//           productData[key] !== null
+//         ) {
 //           formData.append(key, productData[key]);
 //         }
 //       });
@@ -92,7 +136,11 @@
 //   },
 
 //   async updateProduct(id, productData) {
-//     const response = await api.put('/products/' + id, productData);
+//     const response = await api.put(
+//       '/products/' + id,
+//       productData
+//     );
+
 //     return response.data;
 //   },
 
@@ -106,7 +154,10 @@
 //   // ─────────────────────────────────────────────────────────────
 
 //   async getMyProducts() {
-//     const response = await api.get('/products/users/me/products');
+//     const response = await api.get(
+//       '/products/users/me/products'
+//     );
+
 //     return response.data;
 //   },
 
@@ -129,8 +180,6 @@
 //     return response.data;
 //   },
 
-//   // Fetch real boosted products for the landing page.
-//   // Uses the existing premium boosted-ads endpoint.
 //   async getPromotedProducts(limit = 8) {
 //     try {
 //       const safeLimit = Math.max(
@@ -138,9 +187,12 @@
 //         Math.min(40, Number(limit) || 8)
 //       );
 
-//       const response = await api.get('/premium/api/boosted-ads', {
-//         params: { limit: safeLimit },
-//       });
+//       const response = await api.get(
+//         '/premium/api/boosted-ads',
+//         {
+//           params: { limit: safeLimit },
+//         }
+//       );
 
 //       const data = response.data;
 
@@ -174,8 +226,8 @@
 //   async searchProducts(query, filters = {}) {
 //     const response = await api.get('/products/', {
 //       params: {
-//         search: query,
 //         ...filters,
+//         search: query,
 //       },
 //     });
 
@@ -183,7 +235,10 @@
 //   },
 
 //   async getSimilarProducts(id) {
-//     const response = await api.get('/products/' + id + '/similar');
+//     const response = await api.get(
+//       '/products/' + id + '/similar'
+//     );
+
 //     return response.data;
 //   },
 
@@ -417,7 +472,10 @@
 //   // ─────────────────────────────────────────────────────────────
 
 //   async getPendingProducts() {
-//     const response = await api.get('/products/admin/pending');
+//     const response = await api.get(
+//       '/products/admin/pending'
+//     );
+
 //     return response.data;
 //   },
 
@@ -653,6 +711,19 @@ export const productsService = {
 
   async getSellerProducts() {
     const response = await api.get('/products/seller');
+    return response.data;
+  },
+
+  // Manually mark a product as Out of Stock or Available.
+  // This does not change stock_qty or product approval status.
+  async updateProductAvailability(productId, isOutOfStock) {
+    const response = await api.patch(
+      '/products/' + productId + '/availability',
+      {
+        is_out_of_stock: Boolean(isOutOfStock),
+      }
+    );
+
     return response.data;
   },
 

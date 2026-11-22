@@ -1,3 +1,4 @@
+
 // import api from './api';
 
 // export const adminService = {
@@ -27,21 +28,9 @@
 //       return response.data;
 //     } catch (error) {
 //       return [
-//         {
-//           type: 'user',
-//           message: 'New user registered',
-//           time: '2 minutes ago',
-//         },
-//         {
-//           type: 'product',
-//           message: 'New product listed',
-//           time: '15 minutes ago',
-//         },
-//         {
-//           type: 'order',
-//           message: 'New order placed',
-//           time: '1 hour ago',
-//         },
+//         { type: 'user', message: 'New user registered', time: '2 minutes ago' },
+//         { type: 'product', message: 'New product listed', time: '15 minutes ago' },
+//         { type: 'order', message: 'New order placed', time: '1 hour ago' },
 //       ];
 //     }
 //   },
@@ -64,10 +53,7 @@
 
 //     return {
 //       users: response.data.users || [],
-//       total:
-//         response.data.total ||
-//         response.data.users?.length ||
-//         0,
+//       total: response.data.total || response.data.users?.length || 0,
 //       page: response.data.page || 1,
 //       limit: response.data.limit || 20,
 //     };
@@ -79,45 +65,29 @@
 //   },
 
 //   async suspendUser(id, reason = '') {
-//     const response = await api.post(
-//       `/admin/users/${id}/suspend`,
-//       { reason }
-//     );
-
+//     const response = await api.post(`/admin/users/${id}/suspend`, { reason });
 //     return response.data;
 //   },
 
 //   async unsuspendUser(id) {
-//     const response = await api.post(
-//       `/admin/users/${id}/unsuspend`
-//     );
-
+//     const response = await api.post(`/admin/users/${id}/unsuspend`);
 //     return response.data;
 //   },
 
 //   async banUser(id) {
-//     return this.suspendUser(
-//       id,
-//       'Permanently banned'
-//     );
+//     return this.suspendUser(id, 'Permanently banned');
 //   },
 
 //   async deleteUser(id) {
-//     const response = await api.delete(
-//       `/admin/users/${id}`
-//     );
-
+//     const response = await api.delete(`/admin/users/${id}`);
 //     return response.data;
 //   },
 
 //   async resetUserPassword(id, newPassword) {
 //     const response = await api.post(
 //       `/admin/users/${id}/reset-password`,
-//       {
-//         new_password: newPassword,
-//       }
+//       { new_password: newPassword }
 //     );
-
 //     return response.data;
 //   },
 
@@ -131,33 +101,22 @@
 //   },
 
 //   async createAdmin(adminData) {
-//     const response = await api.post(
-//       '/admin/create-admin-frontend',
-//       {
-//         full_name: adminData.full_name,
-//         email: adminData.email,
-//         password: adminData.password,
-//         role: adminData.role || 'admin',
-//       }
-//     );
-
+//     const response = await api.post('/admin/create-admin-frontend', {
+//       full_name: adminData.full_name,
+//       email: adminData.email,
+//       password: adminData.password,
+//       role: adminData.role || 'admin',
+//     });
 //     return response.data;
 //   },
 
 //   async updateAdmin(id, adminData) {
-//     const response = await api.put(
-//       `/admin/admins/${id}`,
-//       adminData
-//     );
-
+//     const response = await api.put(`/admin/admins/${id}`, adminData);
 //     return response.data;
 //   },
 
 //   async deleteAdmin(id) {
-//     const response = await api.delete(
-//       `/admin/admins/${id}`
-//     );
-
+//     const response = await api.delete(`/admin/admins/${id}`);
 //     return response.data;
 //   },
 
@@ -167,25 +126,16 @@
 
 //   async getSettings() {
 //     try {
-//       const response = await api.get(
-//         '/admin/settings'
-//       );
-
+//       const response = await api.get('/admin/settings');
 //       return response.data;
 //     } catch (error) {
-//       console.error(
-//         'Failed to get settings:',
-//         error
-//       );
+//       console.error('Failed to get settings:', error);
 
 //       return {
 //         site_name: 'Nexoleolite',
-//         site_description:
-//           'Buy and sell everything anywhere',
-//         contact_email:
-//           'support@nexoleolite.com',
-//         support_phone:
-//           '+2348012345678',
+//         site_description: 'Buy and sell everything anywhere',
+//         contact_email: 'support@nexoleolite.com',
+//         support_phone: '+2348012345678',
 //         currency: 'NGN',
 //         tax_rate: 7.5,
 //         shipping_fee: 2000,
@@ -195,28 +145,14 @@
 //         maintenance_mode: false,
 //         email_verification: true,
 //         max_upload_size: 5,
-//         allowed_image_types: [
-//           'jpg',
-//           'png',
-//           'webp',
-//           'gif',
-//         ],
-//         allowed_video_types: [
-//           'mp4',
-//           'mov',
-//           'avi',
-//           'webm',
-//         ],
+//         allowed_image_types: ['jpg', 'png', 'webp', 'gif'],
+//         allowed_video_types: ['mp4', 'mov', 'avi', 'webm'],
 //       };
 //     }
 //   },
 
 //   async updateSettings(settings) {
-//     const response = await api.put(
-//       '/admin/settings',
-//       settings
-//     );
-
+//     const response = await api.put('/admin/settings', settings);
 //     return response.data;
 //   },
 
@@ -224,51 +160,17 @@
 //   // PREMIUM MANAGEMENT
 //   // ============================================================
 
-//   /*
-//    * Backend routes (database-backed, app/routers/premium.py):
-//    *
-//    * GET    /premium/admin/plans
-//    * POST   /premium/admin/plans
-//    * PUT    /premium/admin/plans/{planKey}
-//    * DELETE /premium/admin/plans/{planKey}
-//    * POST   /premium/activate/{userId}?plan=...
-//    * DELETE /premium/users/{userId}
-//    * GET    /premium/admin/stats
-//    * GET    /premium/admin/subscriptions
-//    *
-//    * These read/write the PremiumPlan and PremiumSubscription DB
-//    * tables, which is what the public GET /premium/plans endpoint
-//    * (and everything users actually see) reads from.
-//    *
-//    * Do NOT use /admin/premium/* (app/routers/admin.py) for plan
-//    * CRUD or activation — that reads/writes a JSON file on disk
-//    * (premium_plans.json) that the public-facing site never reads.
-//    * Using it caused activated prices to silently mismatch the
-//    * prices shown in the admin UI. activatePremium() below has
-//    * been fixed to use the correct DB-backed route; do not point
-//    * it back at /admin/premium/activate.
-//    */
-
 //   async getPremiumPlans() {
-//     const response = await api.get(
-//       '/premium/admin/plans'
-//     );
-
+//     const response = await api.get('/premium/admin/plans');
 //     return response.data;
 //   },
 
 //   async getAllPremiumSubscriptions() {
 //     try {
-//       const response = await api.get(
-//         '/premium/admin/subscriptions'
-//       );
-
+//       const response = await api.get('/premium/admin/subscriptions');
 //       return response.data;
 //     } catch (error) {
-//       console.error(
-//         'Failed to get premium subscriptions:',
-//         error
-//       );
+//       console.error('Failed to get premium subscriptions:', error);
 
 //       return {
 //         subscriptions: [],
@@ -281,16 +183,10 @@
 
 //   async getPremiumStats() {
 //     try {
-//       const response = await api.get(
-//         '/premium/admin/stats'
-//       );
-
+//       const response = await api.get('/premium/admin/stats');
 //       return response.data;
 //     } catch (error) {
-//       console.error(
-//         'Failed to get premium stats:',
-//         error
-//       );
+//       console.error('Failed to get premium stats:', error);
 
 //       return {
 //         totalPremiumUsers: 0,
@@ -303,103 +199,44 @@
 
 //   async getPremiumUsers() {
 //     try {
-//       const response = await api.get(
-//         '/premium/admin/users'
-//       );
-
+//       const response = await api.get('/premium/admin/users');
 //       return response.data;
 //     } catch (error) {
-//       console.error(
-//         'Failed to get premium users:',
-//         error
-//       );
-
+//       console.error('Failed to get premium users:', error);
 //       return [];
 //     }
 //   },
 
-//   // ------------------------------------------------------------
-//   // CREATE PREMIUM PLAN
-//   // ------------------------------------------------------------
-
 //   async createPremiumPlan(planData) {
-//     const response = await api.post(
-//       '/premium/admin/plans',
-//       {
-//         plan_key:
-//           planData.plan_key
-//             .toLowerCase()
-//             .trim(),
-
-//         name: planData.name,
-
-//         price:
-//           Number(planData.price) || 0,
-
-//         duration_days:
-//           Number(
-//             planData.duration_days
-//           ) || 30,
-
-//         boost_multiplier:
-//           Number(
-//             planData.boost_multiplier
-//           ) || 1,
-
-//         features:
-//           Array.isArray(planData.features)
-//             ? planData.features
-//             : [],
-
-//         is_active:
-//           planData.is_active !== undefined
-//             ? Boolean(planData.is_active)
-//             : true,
-//       }
-//     );
+//     const response = await api.post('/premium/admin/plans', {
+//       plan_key: planData.plan_key.toLowerCase().trim(),
+//       name: planData.name,
+//       price: Number(planData.price) || 0,
+//       duration_days: Number(planData.duration_days) || 30,
+//       boost_multiplier: Number(planData.boost_multiplier) || 1,
+//       features: Array.isArray(planData.features) ? planData.features : [],
+//       is_active:
+//         planData.is_active !== undefined
+//           ? Boolean(planData.is_active)
+//           : true,
+//     });
 
 //     return response.data;
 //   },
 
-//   // ------------------------------------------------------------
-//   // UPDATE PREMIUM PLAN
-//   // ------------------------------------------------------------
-
-//   async updatePremiumPlan(
-//     planKey,
-//     planData
-//   ) {
+//   async updatePremiumPlan(planKey, planData) {
 //     if (!planKey) {
-//       throw new Error(
-//         'Premium plan key is required'
-//       );
+//       throw new Error('Premium plan key is required');
 //     }
 
 //     const response = await api.put(
-//       `/premium/admin/plans/${encodeURIComponent(
-//         planKey
-//       )}`,
+//       `/premium/admin/plans/${encodeURIComponent(planKey)}`,
 //       {
 //         name: planData.name,
-
-//         price:
-//           Number(planData.price) || 0,
-
-//         duration_days:
-//           Number(
-//             planData.duration_days
-//           ) || 30,
-
-//         boost_multiplier:
-//           Number(
-//             planData.boost_multiplier
-//           ) || 1,
-
-//         features:
-//           Array.isArray(planData.features)
-//             ? planData.features
-//             : [],
-
+//         price: Number(planData.price) || 0,
+//         duration_days: Number(planData.duration_days) || 30,
+//         boost_multiplier: Number(planData.boost_multiplier) || 1,
+//         features: Array.isArray(planData.features) ? planData.features : [],
 //         is_active:
 //           planData.is_active !== undefined
 //             ? Boolean(planData.is_active)
@@ -410,87 +247,40 @@
 //     return response.data;
 //   },
 
-//   // ------------------------------------------------------------
-//   // DELETE PREMIUM PLAN
-//   // ------------------------------------------------------------
-
 //   async deletePremiumPlan(planKey) {
 //     const response = await api.delete(
-//       `/premium/admin/plans/${encodeURIComponent(
-//         planKey
-//       )}`
+//       `/premium/admin/plans/${encodeURIComponent(planKey)}`
 //     );
-
 //     return response.data;
 //   },
 
-//   // ------------------------------------------------------------
-//   // PREMIUM ACTIVATION
-//   // ------------------------------------------------------------
-
-//   // FIX: now calls the DB-backed route in premium.py
-//   // (POST /premium/activate/{user_id}?plan=...) instead of the
-//   // JSON-file-backed /admin/premium/activate in admin.py. The old
-//   // route read prices from premium_plans.json, which could silently
-//   // differ from the PremiumPlan DB table shown everywhere else in
-//   // the admin UI — so a user could be charged/credited a stale price
-//   // that didn't match what the admin saw on screen. This route reads
-//   // plan.price directly from the same PremiumPlan table used by
-//   // getPremiumPlans() above, so displayed price and applied price
-//   // are now guaranteed to match.
-//   //
-//   // Note: this endpoint takes `plan` as a query param (not a JSON
-//   // body) and does not support a duration override — it always uses
-//   // the plan's own duration_days, so the `duration` argument is
-//   // intentionally no longer sent.
 //   async activatePremium(userId, plan) {
 //     const response = await api.post(
 //       `/premium/activate/${encodeURIComponent(userId)}`,
 //       null,
-//       {
-//         params: { plan },
-//       }
+//       { params: { plan } }
 //     );
-
 //     return response.data;
 //   },
-
-//   // ------------------------------------------------------------
-//   // PREMIUM DEACTIVATION
-//   // ------------------------------------------------------------
 
 //   async removePremium(userId) {
-//     const response = await api.delete(
-//       `/premium/users/${userId}`
-//     );
-
+//     const response = await api.delete(`/premium/users/${userId}`);
 //     return response.data;
 //   },
 
-//   async deactivatePremium(
-//     subscriptionId
-//   ) {
+//   async deactivatePremium(subscriptionId) {
 //     const response = await api.post(
 //       `/premium/admin/subscriptions/${subscriptionId}/cancel`
 //     );
-
 //     return response.data;
 //   },
 
-//   async extendSubscription(
-//     subscriptionId,
-//     days
-//   ) {
+//   async extendSubscription(subscriptionId, days) {
 //     const response = await api.post(
 //       `/premium/admin/subscriptions/${subscriptionId}/extend`,
 //       null,
-//       {
-//         params: {
-//           days,
-//         },
-//       }
+//       { params: { days } }
 //     );
-
 //     return response.data;
 //   },
 
@@ -499,29 +289,19 @@
 //   // ============================================================
 
 //   async createPromoCode(promoData) {
-//     const response = await api.post(
-//       '/admin/premium/promo',
-//       promoData
-//     );
-
+//     const response = await api.post('/admin/premium/promo', promoData);
 //     return response.data;
 //   },
 
 //   async getAllPromoCodes() {
-//     const response = await api.get(
-//       '/admin/premium/promos'
-//     );
-
+//     const response = await api.get('/admin/premium/promos');
 //     return response.data;
 //   },
 
 //   async deletePromoCode(code) {
 //     const response = await api.delete(
-//       `/admin/premium/promo/${encodeURIComponent(
-//         code
-//       )}`
+//       `/admin/premium/promo/${encodeURIComponent(code)}`
 //     );
-
 //     return response.data;
 //   },
 
@@ -531,65 +311,47 @@
 
 //   async getAllProducts(params = {}) {
 //     try {
-//       const response = await api.get(
-//         '/admin/products',
-//         { params }
-//       );
-
+//       const response = await api.get('/admin/products', { params });
 //       return response.data;
 //     } catch (error) {
-//       return {
-//         products: [],
-//         total: 0,
-//       };
+//       return { products: [], total: 0 };
 //     }
 //   },
 
-//   // Real counts across ALL products, not just the current page.
-//   // Backs the stat cards on AdminProducts.jsx — see admin.py's
-//   // GET /admin/products/stats.
 //   async getProductStats() {
 //     try {
-//       const response = await api.get(
-//         '/admin/products/stats'
-//       );
-
+//       const response = await api.get('/admin/products/stats');
 //       return response.data;
 //     } catch (error) {
-//       console.error(
-//         'Failed to get product stats:',
-//         error
-//       );
-
-//       return {
-//         pending: 0,
-//         approved: 0,
-//         rejected: 0,
-//         total: 0,
-//       };
+//       console.error('Failed to get product stats:', error);
+//       return { pending: 0, approved: 0, rejected: 0, total: 0 };
 //     }
+//   },
+
+//   async getAutoApprove() {
+//     const response = await api.get('/admin/products/auto-approve');
+//     return response.data;
+//   },
+
+//   async setAutoApprove(enabled, approveExisting = false) {
+//     const response = await api.put('/admin/products/auto-approve', {
+//       enabled,
+//       approve_existing: approveExisting,
+//     });
+//     return response.data;
 //   },
 
 //   async getPendingProducts() {
 //     try {
-//       const response = await api.get(
-//         '/admin/products/pending'
-//       );
-
+//       const response = await api.get('/admin/products/pending');
 //       return response.data;
 //     } catch (error) {
-//       return {
-//         products: [],
-//         total: 0,
-//       };
+//       return { products: [], total: 0 };
 //     }
 //   },
 
 //   async approveProduct(id) {
-//     const response = await api.put(
-//       `/admin/products/${id}/approve`
-//     );
-
+//     const response = await api.put(`/admin/products/${id}/approve`);
 //     return response.data;
 //   },
 
@@ -597,33 +359,21 @@
 //     const response = await api.put(
 //       `/admin/products/${id}/reject`,
 //       null,
-//       {
-//         params: {
-//           reason,
-//         },
-//       }
+//       { params: { reason } }
 //     );
-
 //     return response.data;
 //   },
 
-//   async adjustProductViews(
-//     id,
-//     views
-//   ) {
+//   async adjustProductViews(id, views) {
 //     const response = await api.post(
 //       `/admin/products/${id}/adjust-views`,
 //       { views }
 //     );
-
 //     return response.data;
 //   },
 
 //   async deleteProduct(id) {
-//     const response = await api.delete(
-//       `/admin/products/${id}`
-//     );
-
+//     const response = await api.delete(`/admin/products/${id}`);
 //     return response.data;
 //   },
 
@@ -632,42 +382,47 @@
 //   // ============================================================
 
 //   async getAllOrders(params = {}) {
-//     try {
-//       const response = await api.get(
-//         '/admin/orders',
-//         { params }
-//       );
+//     // Let errors reach AdminOrders so it can display the real error.
+//     const response = await api.get('/admin/orders', {
+//       params: {
+//         ...params,
+//         search: params.search?.trim() || undefined,
+//       },
+//     });
 
-//       return response.data;
-//     } catch (error) {
-//       return {
-//         orders: [],
-//         total: 0,
-//       };
-//     }
+//     return response.data;
 //   },
 
 //   async getOrder(id) {
+//     if (!id) {
+//       throw new Error('Order ID is required');
+//     }
+
 //     const response = await api.get(`/admin/orders/${id}`);
 //     return response.data;
 //   },
 
 //   async updateOrderStatus(id, orderStatus, details = {}) {
-//     const response = await api.put(
-//       `/admin/orders/${id}/status`,
-//       {
-//         status: orderStatus,
-//         tracking_number: details.tracking_number || undefined,
-//         tracking_url: details.tracking_url || undefined,
-//         estimated_delivery: details.estimated_delivery || undefined,
-//         notes: details.notes || undefined,
-//       }
-//     );
+//     if (!id) {
+//       throw new Error('Order ID is required');
+//     }
+
+//     const response = await api.put(`/admin/orders/${id}/status`, {
+//       status: orderStatus,
+//       tracking_number: details.tracking_number || undefined,
+//       tracking_url: details.tracking_url || undefined,
+//       estimated_delivery: details.estimated_delivery || undefined,
+//       notes: details.notes || undefined,
+//     });
 
 //     return response.data;
 //   },
 
 //   async processRefund(orderId) {
+//     if (!orderId) {
+//       throw new Error('Order ID is required');
+//     }
+
 //     const response = await api.post(
 //       `/admin/orders/${orderId}/refund`
 //     );
@@ -676,6 +431,10 @@
 //   },
 
 //   async verifyOrderPayment(orderId) {
+//     if (!orderId) {
+//       throw new Error('Order ID is required');
+//     }
+
 //     const response = await api.post(
 //       `/admin/orders/${orderId}/verify-payment`
 //     );
@@ -689,25 +448,15 @@
 
 //   async getAllReviews(params = {}) {
 //     try {
-//       const response = await api.get(
-//         '/admin/reviews',
-//         { params }
-//       );
-
+//       const response = await api.get('/admin/reviews', { params });
 //       return response.data;
 //     } catch (error) {
-//       return {
-//         reviews: [],
-//         total: 0,
-//       };
+//       return { reviews: [], total: 0 };
 //     }
 //   },
 
 //   async deleteReview(id) {
-//     const response = await api.delete(
-//       `/admin/reviews/${id}`
-//     );
-
+//     const response = await api.delete(`/admin/reviews/${id}`);
 //     return response.data;
 //   },
 
@@ -717,18 +466,10 @@
 
 //   async getAuditLogs(params = {}) {
 //     try {
-//       const response = await api.get(
-//         '/admin/audit-logs',
-//         { params }
-//       );
-
+//       const response = await api.get('/admin/audit-logs', { params });
 //       return response.data.logs || [];
 //     } catch (error) {
-//       console.error(
-//         'Failed to get audit logs:',
-//         error
-//       );
-
+//       console.error('Failed to get audit logs:', error);
 //       return [];
 //     }
 //   },
@@ -737,29 +478,18 @@
 //   // MESSAGING
 //   // ============================================================
 
-//   async sendMessageToUser(
-//     userId,
-//     subject,
-//     message
-//   ) {
-//     const response = await api.post(
-//       '/admin/messages/send',
-//       {
-//         user_id: userId,
-//         subject,
-//         message,
-//       }
-//     );
-
+//   async sendMessageToUser(userId, subject, message) {
+//     const response = await api.post('/admin/messages/send', {
+//       user_id: userId,
+//       subject,
+//       message,
+//     });
 //     return response.data;
 //   },
 
 //   async getUsersList() {
 //     try {
-//       const response = await api.get(
-//         '/admin/users/list'
-//       );
-
+//       const response = await api.get('/admin/users/list');
 //       return response.data;
 //     } catch (error) {
 //       return [];
@@ -772,10 +502,7 @@
 
 //   async getAnalytics() {
 //     try {
-//       const response = await api.get(
-//         '/admin/analytics'
-//       );
-
+//       const response = await api.get('/admin/analytics');
 //       return response.data;
 //     } catch (error) {
 //       return {
@@ -794,54 +521,36 @@
 //   // ============================================================
 
 //   async sendNotification(data) {
-//     const response = await api.post(
-//       '/admin/notifications/send',
-//       {
-//         title: data.title,
-//         message: data.message,
-//         type: data.user_type,
-//       }
-//     );
-
+//     const response = await api.post('/admin/notifications/send', {
+//       title: data.title,
+//       message: data.message,
+//       type: data.user_type,
+//     });
 //     return response.data;
 //   },
 
-//   async getRecentNotifications(
-//     limit = 20
-//   ) {
+//   async getRecentNotifications(limit = 20) {
 //     try {
-//       const response = await api.get(
-//         '/admin/notifications/recent',
-//         {
-//           params: {
-//             limit,
-//           },
-//         }
-//       );
-
+//       const response = await api.get('/admin/notifications/recent', {
+//         params: { limit },
+//       });
 //       return response.data;
 //     } catch (error) {
-//       console.error(
-//         'Failed to get notifications:',
-//         error
-//       );
-
+//       console.error('Failed to get notifications:', error);
 //       return [];
 //     }
 //   },
 
-//   async deleteNotification(
-//     notificationId
-//   ) {
+//   async deleteNotification(notificationId) {
 //     const response = await api.delete(
 //       `/admin/notifications/${notificationId}`
 //     );
-
 //     return response.data;
 //   },
 // };
 
 // export default adminService;
+
 import api from './api';
 
 export const adminService = {
@@ -871,21 +580,9 @@ export const adminService = {
       return response.data;
     } catch (error) {
       return [
-        {
-          type: 'user',
-          message: 'New user registered',
-          time: '2 minutes ago',
-        },
-        {
-          type: 'product',
-          message: 'New product listed',
-          time: '15 minutes ago',
-        },
-        {
-          type: 'order',
-          message: 'New order placed',
-          time: '1 hour ago',
-        },
+        { type: 'user', message: 'New user registered', time: '2 minutes ago' },
+        { type: 'product', message: 'New product listed', time: '15 minutes ago' },
+        { type: 'order', message: 'New order placed', time: '1 hour ago' },
       ];
     }
   },
@@ -908,12 +605,10 @@ export const adminService = {
 
     return {
       users: response.data.users || [],
-      total:
-        response.data.total ||
-        response.data.users?.length ||
-        0,
+      total: response.data.total || response.data.users?.length || 0,
       page: response.data.page || 1,
       limit: response.data.limit || 20,
+      stats: response.data.stats || null,
     };
   },
 
@@ -923,45 +618,29 @@ export const adminService = {
   },
 
   async suspendUser(id, reason = '') {
-    const response = await api.post(
-      `/admin/users/${id}/suspend`,
-      { reason }
-    );
-
+    const response = await api.post(`/admin/users/${id}/suspend`, { reason });
     return response.data;
   },
 
   async unsuspendUser(id) {
-    const response = await api.post(
-      `/admin/users/${id}/unsuspend`
-    );
-
+    const response = await api.post(`/admin/users/${id}/unsuspend`);
     return response.data;
   },
 
   async banUser(id) {
-    return this.suspendUser(
-      id,
-      'Permanently banned'
-    );
+    return this.suspendUser(id, 'Permanently banned');
   },
 
   async deleteUser(id) {
-    const response = await api.delete(
-      `/admin/users/${id}`
-    );
-
+    const response = await api.delete(`/admin/users/${id}`);
     return response.data;
   },
 
   async resetUserPassword(id, newPassword) {
     const response = await api.post(
       `/admin/users/${id}/reset-password`,
-      {
-        new_password: newPassword,
-      }
+      { new_password: newPassword }
     );
-
     return response.data;
   },
 
@@ -975,33 +654,22 @@ export const adminService = {
   },
 
   async createAdmin(adminData) {
-    const response = await api.post(
-      '/admin/create-admin-frontend',
-      {
-        full_name: adminData.full_name,
-        email: adminData.email,
-        password: adminData.password,
-        role: adminData.role || 'admin',
-      }
-    );
-
+    const response = await api.post('/admin/create-admin-frontend', {
+      full_name: adminData.full_name,
+      email: adminData.email,
+      password: adminData.password,
+      role: adminData.role || 'admin',
+    });
     return response.data;
   },
 
   async updateAdmin(id, adminData) {
-    const response = await api.put(
-      `/admin/admins/${id}`,
-      adminData
-    );
-
+    const response = await api.put(`/admin/admins/${id}`, adminData);
     return response.data;
   },
 
   async deleteAdmin(id) {
-    const response = await api.delete(
-      `/admin/admins/${id}`
-    );
-
+    const response = await api.delete(`/admin/admins/${id}`);
     return response.data;
   },
 
@@ -1011,25 +679,16 @@ export const adminService = {
 
   async getSettings() {
     try {
-      const response = await api.get(
-        '/admin/settings'
-      );
-
+      const response = await api.get('/admin/settings');
       return response.data;
     } catch (error) {
-      console.error(
-        'Failed to get settings:',
-        error
-      );
+      console.error('Failed to get settings:', error);
 
       return {
         site_name: 'Nexoleolite',
-        site_description:
-          'Buy and sell everything anywhere',
-        contact_email:
-          'support@nexoleolite.com',
-        support_phone:
-          '+2348012345678',
+        site_description: 'Buy and sell everything anywhere',
+        contact_email: 'support@nexoleolite.com',
+        support_phone: '+2348012345678',
         currency: 'NGN',
         tax_rate: 7.5,
         shipping_fee: 2000,
@@ -1039,28 +698,14 @@ export const adminService = {
         maintenance_mode: false,
         email_verification: true,
         max_upload_size: 5,
-        allowed_image_types: [
-          'jpg',
-          'png',
-          'webp',
-          'gif',
-        ],
-        allowed_video_types: [
-          'mp4',
-          'mov',
-          'avi',
-          'webm',
-        ],
+        allowed_image_types: ['jpg', 'png', 'webp', 'gif'],
+        allowed_video_types: ['mp4', 'mov', 'avi', 'webm'],
       };
     }
   },
 
   async updateSettings(settings) {
-    const response = await api.put(
-      '/admin/settings',
-      settings
-    );
-
+    const response = await api.put('/admin/settings', settings);
     return response.data;
   },
 
@@ -1068,51 +713,17 @@ export const adminService = {
   // PREMIUM MANAGEMENT
   // ============================================================
 
-  /*
-   * Backend routes (database-backed, app/routers/premium.py):
-   *
-   * GET    /premium/admin/plans
-   * POST   /premium/admin/plans
-   * PUT    /premium/admin/plans/{planKey}
-   * DELETE /premium/admin/plans/{planKey}
-   * POST   /premium/activate/{userId}?plan=...
-   * DELETE /premium/users/{userId}
-   * GET    /premium/admin/stats
-   * GET    /premium/admin/subscriptions
-   *
-   * These read/write the PremiumPlan and PremiumSubscription DB
-   * tables, which is what the public GET /premium/plans endpoint
-   * (and everything users actually see) reads from.
-   *
-   * Do NOT use /admin/premium/* (app/routers/admin.py) for plan
-   * CRUD or activation — that reads/writes a JSON file on disk
-   * (premium_plans.json) that the public-facing site never reads.
-   * Using it caused activated prices to silently mismatch the
-   * prices shown in the admin UI. activatePremium() below has
-   * been fixed to use the correct DB-backed route; do not point
-   * it back at /admin/premium/activate.
-   */
-
   async getPremiumPlans() {
-    const response = await api.get(
-      '/premium/admin/plans'
-    );
-
+    const response = await api.get('/premium/admin/plans');
     return response.data;
   },
 
   async getAllPremiumSubscriptions() {
     try {
-      const response = await api.get(
-        '/premium/admin/subscriptions'
-      );
-
+      const response = await api.get('/premium/admin/subscriptions');
       return response.data;
     } catch (error) {
-      console.error(
-        'Failed to get premium subscriptions:',
-        error
-      );
+      console.error('Failed to get premium subscriptions:', error);
 
       return {
         subscriptions: [],
@@ -1125,16 +736,10 @@ export const adminService = {
 
   async getPremiumStats() {
     try {
-      const response = await api.get(
-        '/premium/admin/stats'
-      );
-
+      const response = await api.get('/premium/admin/stats');
       return response.data;
     } catch (error) {
-      console.error(
-        'Failed to get premium stats:',
-        error
-      );
+      console.error('Failed to get premium stats:', error);
 
       return {
         totalPremiumUsers: 0,
@@ -1147,103 +752,44 @@ export const adminService = {
 
   async getPremiumUsers() {
     try {
-      const response = await api.get(
-        '/premium/admin/users'
-      );
-
+      const response = await api.get('/premium/admin/users');
       return response.data;
     } catch (error) {
-      console.error(
-        'Failed to get premium users:',
-        error
-      );
-
+      console.error('Failed to get premium users:', error);
       return [];
     }
   },
 
-  // ------------------------------------------------------------
-  // CREATE PREMIUM PLAN
-  // ------------------------------------------------------------
-
   async createPremiumPlan(planData) {
-    const response = await api.post(
-      '/premium/admin/plans',
-      {
-        plan_key:
-          planData.plan_key
-            .toLowerCase()
-            .trim(),
-
-        name: planData.name,
-
-        price:
-          Number(planData.price) || 0,
-
-        duration_days:
-          Number(
-            planData.duration_days
-          ) || 30,
-
-        boost_multiplier:
-          Number(
-            planData.boost_multiplier
-          ) || 1,
-
-        features:
-          Array.isArray(planData.features)
-            ? planData.features
-            : [],
-
-        is_active:
-          planData.is_active !== undefined
-            ? Boolean(planData.is_active)
-            : true,
-      }
-    );
+    const response = await api.post('/premium/admin/plans', {
+      plan_key: planData.plan_key.toLowerCase().trim(),
+      name: planData.name,
+      price: Number(planData.price) || 0,
+      duration_days: Number(planData.duration_days) || 30,
+      boost_multiplier: Number(planData.boost_multiplier) || 1,
+      features: Array.isArray(planData.features) ? planData.features : [],
+      is_active:
+        planData.is_active !== undefined
+          ? Boolean(planData.is_active)
+          : true,
+    });
 
     return response.data;
   },
 
-  // ------------------------------------------------------------
-  // UPDATE PREMIUM PLAN
-  // ------------------------------------------------------------
-
-  async updatePremiumPlan(
-    planKey,
-    planData
-  ) {
+  async updatePremiumPlan(planKey, planData) {
     if (!planKey) {
-      throw new Error(
-        'Premium plan key is required'
-      );
+      throw new Error('Premium plan key is required');
     }
 
     const response = await api.put(
-      `/premium/admin/plans/${encodeURIComponent(
-        planKey
-      )}`,
+      `/premium/admin/plans/${encodeURIComponent(planKey)}`,
       {
         name: planData.name,
-
-        price:
-          Number(planData.price) || 0,
-
-        duration_days:
-          Number(
-            planData.duration_days
-          ) || 30,
-
-        boost_multiplier:
-          Number(
-            planData.boost_multiplier
-          ) || 1,
-
-        features:
-          Array.isArray(planData.features)
-            ? planData.features
-            : [],
-
+        price: Number(planData.price) || 0,
+        duration_days: Number(planData.duration_days) || 30,
+        boost_multiplier: Number(planData.boost_multiplier) || 1,
+        features: Array.isArray(planData.features) ? planData.features : [],
         is_active:
           planData.is_active !== undefined
             ? Boolean(planData.is_active)
@@ -1254,87 +800,40 @@ export const adminService = {
     return response.data;
   },
 
-  // ------------------------------------------------------------
-  // DELETE PREMIUM PLAN
-  // ------------------------------------------------------------
-
   async deletePremiumPlan(planKey) {
     const response = await api.delete(
-      `/premium/admin/plans/${encodeURIComponent(
-        planKey
-      )}`
+      `/premium/admin/plans/${encodeURIComponent(planKey)}`
     );
-
     return response.data;
   },
 
-  // ------------------------------------------------------------
-  // PREMIUM ACTIVATION
-  // ------------------------------------------------------------
-
-  // FIX: now calls the DB-backed route in premium.py
-  // (POST /premium/activate/{user_id}?plan=...) instead of the
-  // JSON-file-backed /admin/premium/activate in admin.py. The old
-  // route read prices from premium_plans.json, which could silently
-  // differ from the PremiumPlan DB table shown everywhere else in
-  // the admin UI — so a user could be charged/credited a stale price
-  // that didn't match what the admin saw on screen. This route reads
-  // plan.price directly from the same PremiumPlan table used by
-  // getPremiumPlans() above, so displayed price and applied price
-  // are now guaranteed to match.
-  //
-  // Note: this endpoint takes `plan` as a query param (not a JSON
-  // body) and does not support a duration override — it always uses
-  // the plan's own duration_days, so the `duration` argument is
-  // intentionally no longer sent.
   async activatePremium(userId, plan) {
     const response = await api.post(
       `/premium/activate/${encodeURIComponent(userId)}`,
       null,
-      {
-        params: { plan },
-      }
+      { params: { plan } }
     );
-
     return response.data;
   },
-
-  // ------------------------------------------------------------
-  // PREMIUM DEACTIVATION
-  // ------------------------------------------------------------
 
   async removePremium(userId) {
-    const response = await api.delete(
-      `/premium/users/${userId}`
-    );
-
+    const response = await api.delete(`/premium/users/${userId}`);
     return response.data;
   },
 
-  async deactivatePremium(
-    subscriptionId
-  ) {
+  async deactivatePremium(subscriptionId) {
     const response = await api.post(
       `/premium/admin/subscriptions/${subscriptionId}/cancel`
     );
-
     return response.data;
   },
 
-  async extendSubscription(
-    subscriptionId,
-    days
-  ) {
+  async extendSubscription(subscriptionId, days) {
     const response = await api.post(
       `/premium/admin/subscriptions/${subscriptionId}/extend`,
       null,
-      {
-        params: {
-          days,
-        },
-      }
+      { params: { days } }
     );
-
     return response.data;
   },
 
@@ -1343,29 +842,19 @@ export const adminService = {
   // ============================================================
 
   async createPromoCode(promoData) {
-    const response = await api.post(
-      '/admin/premium/promo',
-      promoData
-    );
-
+    const response = await api.post('/admin/premium/promo', promoData);
     return response.data;
   },
 
   async getAllPromoCodes() {
-    const response = await api.get(
-      '/admin/premium/promos'
-    );
-
+    const response = await api.get('/admin/premium/promos');
     return response.data;
   },
 
   async deletePromoCode(code) {
     const response = await api.delete(
-      `/admin/premium/promo/${encodeURIComponent(
-        code
-      )}`
+      `/admin/premium/promo/${encodeURIComponent(code)}`
     );
-
     return response.data;
   },
 
@@ -1375,92 +864,47 @@ export const adminService = {
 
   async getAllProducts(params = {}) {
     try {
-      const response = await api.get(
-        '/admin/products',
-        { params }
-      );
-
+      const response = await api.get('/admin/products', { params });
       return response.data;
     } catch (error) {
-      return {
-        products: [],
-        total: 0,
-      };
+      return { products: [], total: 0 };
     }
   },
 
-  // Real counts across ALL products, not just the current page.
-  // Backs the stat cards on AdminProducts.jsx — see admin.py's
-  // GET /admin/products/stats.
   async getProductStats() {
     try {
-      const response = await api.get(
-        '/admin/products/stats'
-      );
-
+      const response = await api.get('/admin/products/stats');
       return response.data;
     } catch (error) {
-      console.error(
-        'Failed to get product stats:',
-        error
-      );
-
-      return {
-        pending: 0,
-        approved: 0,
-        rejected: 0,
-        total: 0,
-      };
+      console.error('Failed to get product stats:', error);
+      return { pending: 0, approved: 0, rejected: 0, total: 0 };
     }
   },
 
-  // ------------------------------------------------------------
-  // AUTO-APPROVE SWITCH
-  // ------------------------------------------------------------
-  // No try/catch on purpose: if the request fails we want the error
-  // to bubble up, instead of returning a fake default that would show
-  // the switch as OFF when it is really ON.
-
   async getAutoApprove() {
-    const response = await api.get(
-      '/admin/products/auto-approve'
-    );
-
+    const response = await api.get('/admin/products/auto-approve');
     return response.data;
   },
 
   async setAutoApprove(enabled, approveExisting = false) {
-    const response = await api.put(
-      '/admin/products/auto-approve',
-      {
-        enabled,
-        approve_existing: approveExisting,
-      }
-    );
-
+    const response = await api.put('/admin/products/auto-approve', {
+      enabled,
+      approve_existing: approveExisting,
+    });
     return response.data;
   },
 
   async getPendingProducts() {
     try {
-      const response = await api.get(
-        '/admin/products/pending'
-      );
-
+      const response = await api.get('/admin/products/pending');
       return response.data;
     } catch (error) {
-      return {
-        products: [],
-        total: 0,
-      };
+      return { products: [], total: 0 };
     }
   },
 
   async approveProduct(id) {
-    const response = await api.put(
-      `/admin/products/${id}/approve`
-    );
-
+    const response = await api.put(`/admin/products/${id}/approve`);
     return response.data;
   },
 
@@ -1468,33 +912,21 @@ export const adminService = {
     const response = await api.put(
       `/admin/products/${id}/reject`,
       null,
-      {
-        params: {
-          reason,
-        },
-      }
+      { params: { reason } }
     );
-
     return response.data;
   },
 
-  async adjustProductViews(
-    id,
-    views
-  ) {
+  async adjustProductViews(id, views) {
     const response = await api.post(
       `/admin/products/${id}/adjust-views`,
       { views }
     );
-
     return response.data;
   },
 
   async deleteProduct(id) {
-    const response = await api.delete(
-      `/admin/products/${id}`
-    );
-
+    const response = await api.delete(`/admin/products/${id}`);
     return response.data;
   },
 
@@ -1503,42 +935,47 @@ export const adminService = {
   // ============================================================
 
   async getAllOrders(params = {}) {
-    try {
-      const response = await api.get(
-        '/admin/orders',
-        { params }
-      );
+    // Let errors reach AdminOrders so it can display the real error.
+    const response = await api.get('/admin/orders', {
+      params: {
+        ...params,
+        search: params.search?.trim() || undefined,
+      },
+    });
 
-      return response.data;
-    } catch (error) {
-      return {
-        orders: [],
-        total: 0,
-      };
-    }
+    return response.data;
   },
 
   async getOrder(id) {
+    if (!id) {
+      throw new Error('Order ID is required');
+    }
+
     const response = await api.get(`/admin/orders/${id}`);
     return response.data;
   },
 
   async updateOrderStatus(id, orderStatus, details = {}) {
-    const response = await api.put(
-      `/admin/orders/${id}/status`,
-      {
-        status: orderStatus,
-        tracking_number: details.tracking_number || undefined,
-        tracking_url: details.tracking_url || undefined,
-        estimated_delivery: details.estimated_delivery || undefined,
-        notes: details.notes || undefined,
-      }
-    );
+    if (!id) {
+      throw new Error('Order ID is required');
+    }
+
+    const response = await api.put(`/admin/orders/${id}/status`, {
+      status: orderStatus,
+      tracking_number: details.tracking_number || undefined,
+      tracking_url: details.tracking_url || undefined,
+      estimated_delivery: details.estimated_delivery || undefined,
+      notes: details.notes || undefined,
+    });
 
     return response.data;
   },
 
   async processRefund(orderId) {
+    if (!orderId) {
+      throw new Error('Order ID is required');
+    }
+
     const response = await api.post(
       `/admin/orders/${orderId}/refund`
     );
@@ -1547,6 +984,10 @@ export const adminService = {
   },
 
   async verifyOrderPayment(orderId) {
+    if (!orderId) {
+      throw new Error('Order ID is required');
+    }
+
     const response = await api.post(
       `/admin/orders/${orderId}/verify-payment`
     );
@@ -1560,25 +1001,15 @@ export const adminService = {
 
   async getAllReviews(params = {}) {
     try {
-      const response = await api.get(
-        '/admin/reviews',
-        { params }
-      );
-
+      const response = await api.get('/admin/reviews', { params });
       return response.data;
     } catch (error) {
-      return {
-        reviews: [],
-        total: 0,
-      };
+      return { reviews: [], total: 0 };
     }
   },
 
   async deleteReview(id) {
-    const response = await api.delete(
-      `/admin/reviews/${id}`
-    );
-
+    const response = await api.delete(`/admin/reviews/${id}`);
     return response.data;
   },
 
@@ -1588,18 +1019,10 @@ export const adminService = {
 
   async getAuditLogs(params = {}) {
     try {
-      const response = await api.get(
-        '/admin/audit-logs',
-        { params }
-      );
-
+      const response = await api.get('/admin/audit-logs', { params });
       return response.data.logs || [];
     } catch (error) {
-      console.error(
-        'Failed to get audit logs:',
-        error
-      );
-
+      console.error('Failed to get audit logs:', error);
       return [];
     }
   },
@@ -1608,29 +1031,18 @@ export const adminService = {
   // MESSAGING
   // ============================================================
 
-  async sendMessageToUser(
-    userId,
-    subject,
-    message
-  ) {
-    const response = await api.post(
-      '/admin/messages/send',
-      {
-        user_id: userId,
-        subject,
-        message,
-      }
-    );
-
+  async sendMessageToUser(userId, subject, message) {
+    const response = await api.post('/admin/messages/send', {
+      user_id: userId,
+      subject,
+      message,
+    });
     return response.data;
   },
 
   async getUsersList() {
     try {
-      const response = await api.get(
-        '/admin/users/list'
-      );
-
+      const response = await api.get('/admin/users/list');
       return response.data;
     } catch (error) {
       return [];
@@ -1643,10 +1055,7 @@ export const adminService = {
 
   async getAnalytics() {
     try {
-      const response = await api.get(
-        '/admin/analytics'
-      );
-
+      const response = await api.get('/admin/analytics');
       return response.data;
     } catch (error) {
       return {
@@ -1665,49 +1074,30 @@ export const adminService = {
   // ============================================================
 
   async sendNotification(data) {
-    const response = await api.post(
-      '/admin/notifications/send',
-      {
-        title: data.title,
-        message: data.message,
-        type: data.user_type,
-      }
-    );
-
+    const response = await api.post('/admin/notifications/send', {
+      title: data.title,
+      message: data.message,
+      type: data.user_type,
+    });
     return response.data;
   },
 
-  async getRecentNotifications(
-    limit = 20
-  ) {
+  async getRecentNotifications(limit = 20) {
     try {
-      const response = await api.get(
-        '/admin/notifications/recent',
-        {
-          params: {
-            limit,
-          },
-        }
-      );
-
+      const response = await api.get('/admin/notifications/recent', {
+        params: { limit },
+      });
       return response.data;
     } catch (error) {
-      console.error(
-        'Failed to get notifications:',
-        error
-      );
-
+      console.error('Failed to get notifications:', error);
       return [];
     }
   },
 
-  async deleteNotification(
-    notificationId
-  ) {
+  async deleteNotification(notificationId) {
     const response = await api.delete(
       `/admin/notifications/${notificationId}`
     );
-
     return response.data;
   },
 };
