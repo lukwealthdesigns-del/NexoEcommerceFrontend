@@ -1,5 +1,7 @@
 
 
+
+
 // import React, { useState, useEffect } from 'react';
 // import { Link, useNavigate } from 'react-router-dom';
 // import {
@@ -27,6 +29,7 @@
 
 //   const [featuredProducts, setFeaturedProducts] = useState([]);
 //   const [promotedProducts, setPromotedProducts] = useState([]);
+//   const [discountProducts, setDiscountProducts] = useState([]);
 //   const [trendingProducts, setTrendingProducts] = useState([]);
 //   const [newArrivals, setNewArrivals] = useState([]);
 //   const [topSellers, setTopSellers] = useState([]);
@@ -353,11 +356,13 @@
 //         promotedRes,
 //         trendingRes,
 //         newArrivalsRes,
+//         discountRes,
 //       ] = await Promise.allSettled([
 //         productsService.getFeaturedProducts(),
 //         productsService.getPromotedProducts(8),
 //         productsService.getTrendingProducts(),
 //         productsService.getProducts({ sort: 'newest', limit: 8 }),
+//         productsService.getProducts({ sort: 'newest', limit: 100 }),
 //       ]);
 
 //       if (cancelled) return;
@@ -382,10 +387,36 @@
 //           ? normalizeProducts(newArrivalsRes.value)
 //           : [];
 
+//       const discountCandidates =
+//         discountRes.status === 'fulfilled'
+//           ? normalizeProducts(discountRes.value)
+//           : [];
+
+//       const activeDiscounts = discountCandidates
+//         .filter((product) => {
+//           const regularPrice = Number(product?.regular_price ?? product?.price);
+//           const salePrice = Number(
+//             product?.effective_price ?? product?.discounted_price
+//           );
+//           return (
+//             product?.is_promotion_active === true &&
+//             Number(product?.discount_percent) > 0 &&
+//             Number.isFinite(regularPrice) &&
+//             Number.isFinite(salePrice) &&
+//             regularPrice > salePrice &&
+//             salePrice > 0
+//           );
+//         })
+//         .filter(
+//           (product, index, products) =>
+//             products.findIndex((item) => item.id === product.id) === index
+//         );
+
 //       setFeaturedProducts(featured.length ? featured : mockProducts);
 
-//       // Never insert demo products into promoted products.
+//       // Never insert demo products into promoted products or discount deals.
 //       setPromotedProducts(promoted);
+//       setDiscountProducts(activeDiscounts);
 
 //       setTrendingProducts(
 //         trending.length ? trending : [...mockProducts].reverse()
@@ -664,6 +695,37 @@
 //         </section>
 //       )}
 
+//       {/* DISCOUNT DEALS */}
+//       {discountProducts.length > 0 && (
+//         <section className="py-16 bg-gradient-to-br from-red-50 via-orange-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+//           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+//             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+//               <div>
+//                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+//                   <Zap className="h-6 w-6 text-red-500" />
+//                   Discount Deals
+//                 </h2>
+//                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+//                   Save more on products with active discounts. Limited-time offers from sellers.
+//                 </p>
+//               </div>
+//               <Link
+//                 to="/shop?discounted=true"
+//                 className="inline-flex items-center gap-1 text-brand-orange hover:gap-2 transition shrink-0 font-medium"
+//               >
+//                 View All Deals <ChevronRight className="h-4 w-4" />
+//               </Link>
+//             </div>
+
+//             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+//               {discountProducts.slice(0, 8).map((product) => (
+//                 <ProductCard key={product.id} product={product} />
+//               ))}
+//             </div>
+//           </div>
+//         </section>
+//       )}
+
 //       {/* FEATURED PRODUCTS */}
 //       <section className="py-16 bg-gray-50 dark:bg-gray-800/50">
 //         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -804,20 +866,12 @@
 // export default LandingPage;
 
 
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Search,
-  MapPin,
-  Star,
-  TrendingUp,
-  ChevronRight,
-  ShoppingBag,
-  ArrowRight,
-  Zap,
-  Shield,
-  Truck,
-  Heart,
+  Search, MapPin, Star, TrendingUp, ChevronRight, ShoppingBag,
+  ArrowRight, Zap, Shield, Truck, Heart,
 } from 'lucide-react';
 
 import ProductCard from '../../components/ui/ProductCard';
@@ -840,6 +894,9 @@ const LandingPage = () => {
   const [loading, setLoading] = useState(true);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
 
+  // ANIMATED SEARCH PLACEHOLDER
+  const [searchPlaceholder, setSearchPlaceholder] = useState('');
+
   // HERO BACKGROUND SLIDESHOW
   const heroBackgroundImages = [
     'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1920&h=1080&fit=crop',
@@ -850,14 +907,62 @@ const LandingPage = () => {
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1920&h=1080&fit=crop',
   ];
 
+  // HERO BACKGROUND SLIDESHOW
   useEffect(() => {
     const heroInterval = setInterval(() => {
-      setHeroImageIndex(
-        (previous) => (previous + 1) % heroBackgroundImages.length
-      );
+      setHeroImageIndex((previous) => (previous + 1) % heroBackgroundImages.length);
     }, 6000);
 
     return () => clearInterval(heroInterval);
+  }, []);
+
+  // ANIMATED SEARCH PLACEHOLDER (TYPEWRITER EFFECT)
+  useEffect(() => {
+    const phrases = [
+      'What are you looking for?',
+      'Search phones, laptops, and electronics...',
+      'Find fashion, shoes, and accessories...',
+      'Discover something amazing...',
+      'Search for your favorite products...',
+    ];
+
+    let phraseIndex = 0;
+    let characterIndex = 0;
+    let deleting = false;
+    let timeout;
+
+    const animatePlaceholder = () => {
+      const currentPhrase = phrases[phraseIndex];
+
+      if (!deleting) {
+        characterIndex++;
+        setSearchPlaceholder(currentPhrase.substring(0, characterIndex));
+
+        if (characterIndex >= currentPhrase.length) {
+          deleting = true;
+          timeout = setTimeout(animatePlaceholder, 1800);
+          return;
+        }
+
+        timeout = setTimeout(animatePlaceholder, 75);
+      } else {
+        characterIndex--;
+        setSearchPlaceholder(currentPhrase.substring(0, characterIndex));
+
+        if (characterIndex <= 0) {
+          deleting = false;
+          phraseIndex = (phraseIndex + 1) % phrases.length;
+          timeout = setTimeout(animatePlaceholder, 400);
+          return;
+        }
+
+        timeout = setTimeout(animatePlaceholder, 35);
+      }
+    };
+
+    animatePlaceholder();
+
+    return () => clearTimeout(timeout);
   }, []);
 
   // CATEGORIES
@@ -948,12 +1053,11 @@ const LandingPage = () => {
     categoriesData.map(() => 0)
   );
 
+  // CATEGORY IMAGE ROTATION
   useEffect(() => {
     const interval = setInterval(() => {
       setCategoryImageIndices((previous) =>
-        previous.map(
-          (index, i) => (index + 1) % categoriesData[i].images.length
-        )
+        previous.map((index, i) => (index + 1) % categoriesData[i].images.length)
       );
     }, 5000);
 
@@ -991,9 +1095,7 @@ const LandingPage = () => {
       title: 'iPhone 14 Pro Max',
       price: 1200000,
       category: 'Electronics',
-      images: [
-        'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop',
-      ],
+      images: ['https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop'],
       views: 1520,
       seller_name: 'Apple Store NG',
       likes_count: 45,
@@ -1003,9 +1105,7 @@ const LandingPage = () => {
       title: 'Nike Air Max 270',
       price: 85000,
       category: 'Fashion',
-      images: [
-        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop',
-      ],
+      images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop'],
       views: 3200,
       seller_name: 'Nike Official',
       likes_count: 89,
@@ -1015,9 +1115,7 @@ const LandingPage = () => {
       title: 'Samsung Galaxy S23 Ultra',
       price: 950000,
       category: 'Electronics',
-      images: [
-        'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop',
-      ],
+      images: ['https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop'],
       views: 980,
       seller_name: 'Samsung NG',
       likes_count: 34,
@@ -1027,9 +1125,7 @@ const LandingPage = () => {
       title: 'Sony WH-1000XM5',
       price: 350000,
       category: 'Electronics',
-      images: [
-        'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400&h=400&fit=crop',
-      ],
+      images: ['https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400&h=400&fit=crop'],
       views: 2100,
       seller_name: 'Sony Store',
       likes_count: 67,
@@ -1039,9 +1135,7 @@ const LandingPage = () => {
       title: 'Gucci Handbag',
       price: 450000,
       category: 'Fashion',
-      images: [
-        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=400&fit=crop',
-      ],
+      images: ['https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=400&fit=crop'],
       views: 560,
       seller_name: 'Luxury Hub',
       likes_count: 23,
@@ -1051,9 +1145,7 @@ const LandingPage = () => {
       title: 'Dyson V15 Vacuum',
       price: 650000,
       category: 'Home & Garden',
-      images: [
-        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop',
-      ],
+      images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop'],
       views: 430,
       seller_name: 'Dyson NG',
       likes_count: 12,
@@ -1063,9 +1155,7 @@ const LandingPage = () => {
       title: 'MacBook Pro M3',
       price: 2500000,
       category: 'Electronics',
-      images: [
-        'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop',
-      ],
+      images: ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop'],
       views: 890,
       seller_name: 'Apple Store NG',
       likes_count: 56,
@@ -1075,62 +1165,55 @@ const LandingPage = () => {
       title: 'Adidas Ultraboost',
       price: 75000,
       category: 'Fashion',
-      images: [
-        'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400&h=400&fit=crop',
-      ],
+      images: ['https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400&h=400&fit=crop'],
       views: 1670,
       seller_name: 'Adidas NG',
       likes_count: 78,
     },
   ];
 
+  // MOCK SELLERS
   const mockSellers = [
     {
       name: 'Apple Store NG',
       rating: 4.9,
       products: 234,
-      image:
-        'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=150&h=150&fit=crop',
+      image: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=150&h=150&fit=crop',
       alt: 'Apple MacBook',
     },
     {
       name: 'Nike Official',
       rating: 4.9,
       products: 456,
-      image:
-        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=150&h=150&fit=crop',
+      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=150&h=150&fit=crop',
       alt: 'Nike shoes',
     },
     {
       name: 'Samsung NG',
       rating: 4.8,
       products: 189,
-      image:
-        'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=150&h=150&fit=crop',
+      image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=150&h=150&fit=crop',
       alt: 'Samsung phone',
     },
     {
       name: 'Sony Store',
       rating: 4.7,
       products: 123,
-      image:
-        'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=150&h=150&fit=crop',
+      image: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=150&h=150&fit=crop',
       alt: 'Sony headphones',
     },
     {
       name: 'Luxury Hub',
       rating: 4.8,
       products: 89,
-      image:
-        'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=150&h=150&fit=crop',
+      image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=150&h=150&fit=crop',
       alt: 'Luxury bag',
     },
     {
       name: 'Dyson NG',
       rating: 4.6,
       products: 45,
-      image:
-        'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=150&h=150&fit=crop',
+      image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=150&h=150&fit=crop',
       alt: 'Dyson vacuum',
     },
   ];
@@ -1140,9 +1223,7 @@ const LandingPage = () => {
     if (Array.isArray(response)) return response;
     if (Array.isArray(response?.products)) return response.products;
     if (Array.isArray(response?.data)) return response.data;
-    if (Array.isArray(response?.data?.products)) {
-      return response.data.products;
-    }
+    if (Array.isArray(response?.data?.products)) return response.data.products;
     return [];
   };
 
@@ -1169,30 +1250,20 @@ const LandingPage = () => {
 
       if (cancelled) return;
 
-      const featured =
-        featuredRes.status === 'fulfilled'
-          ? normalizeProducts(featuredRes.value)
-          : [];
+      const featured = featuredRes.status === 'fulfilled'
+        ? normalizeProducts(featuredRes.value) : [];
 
-      const promoted =
-        promotedRes.status === 'fulfilled'
-          ? normalizeProducts(promotedRes.value)
-          : [];
+      const promoted = promotedRes.status === 'fulfilled'
+        ? normalizeProducts(promotedRes.value) : [];
 
-      const trending =
-        trendingRes.status === 'fulfilled'
-          ? normalizeProducts(trendingRes.value)
-          : [];
+      const trending = trendingRes.status === 'fulfilled'
+        ? normalizeProducts(trendingRes.value) : [];
 
-      const newest =
-        newArrivalsRes.status === 'fulfilled'
-          ? normalizeProducts(newArrivalsRes.value)
-          : [];
+      const newest = newArrivalsRes.status === 'fulfilled'
+        ? normalizeProducts(newArrivalsRes.value) : [];
 
-      const discountCandidates =
-        discountRes.status === 'fulfilled'
-          ? normalizeProducts(discountRes.value)
-          : [];
+      const discountCandidates = discountRes.status === 'fulfilled'
+        ? normalizeProducts(discountRes.value) : [];
 
       const activeDiscounts = discountCandidates
         .filter((product) => {
@@ -1200,6 +1271,7 @@ const LandingPage = () => {
           const salePrice = Number(
             product?.effective_price ?? product?.discounted_price
           );
+
           return (
             product?.is_promotion_active === true &&
             Number(product?.discount_percent) > 0 &&
@@ -1209,9 +1281,8 @@ const LandingPage = () => {
             salePrice > 0
           );
         })
-        .filter(
-          (product, index, products) =>
-            products.findIndex((item) => item.id === product.id) === index
+        .filter((product, index, products) =>
+          products.findIndex((item) => item.id === product.id) === index
         );
 
       setFeaturedProducts(featured.length ? featured : mockProducts);
@@ -1220,10 +1291,7 @@ const LandingPage = () => {
       setPromotedProducts(promoted);
       setDiscountProducts(activeDiscounts);
 
-      setTrendingProducts(
-        trending.length ? trending : [...mockProducts].reverse()
-      );
-
+      setTrendingProducts(trending.length ? trending : [...mockProducts].reverse());
       setNewArrivals(newest.length ? newest : mockProducts);
       setTopSellers(mockSellers);
       setLoading(false);
@@ -1240,22 +1308,15 @@ const LandingPage = () => {
   const handleSearch = () => {
     const params = new URLSearchParams();
 
-    if (searchQuery.trim()) {
-      params.set('search', searchQuery.trim());
-    }
-
-    if (selectedCategory) {
-      params.set('category', selectedCategory);
-    }
+    if (searchQuery.trim()) params.set('search', searchQuery.trim());
+    if (selectedCategory) params.set('category', selectedCategory);
 
     const query = params.toString();
     navigate(query ? `/shop?${query}` : '/shop');
   };
 
   const handleKeyPress = (event) => {
-    if (event.key === 'Enter') {
-      handleSearch();
-    }
+    if (event.key === 'Enter') handleSearch();
   };
 
   // BECOME A SELLER
@@ -1283,6 +1344,30 @@ const LandingPage = () => {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* HERO SECTION */}
       <section className="relative overflow-hidden">
+        {/* TICKER ANIMATIONS */}
+        <style>{`
+          @keyframes nexoleoliteTickerLeft {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+          }
+          @keyframes nexoleoliteTickerRight {
+            from { transform: translateX(-50%); }
+            to { transform: translateX(0); }
+          }
+          .nexoleolite-ticker-track {
+            display: flex;
+            width: max-content;
+            will-change: transform;
+          }
+          .nexoleolite-ticker-left { animation: nexoleoliteTickerLeft 32s linear infinite; }
+          .nexoleolite-ticker-right { animation: nexoleoliteTickerRight 38s linear infinite; }
+          .nexoleolite-ticker-track:hover { animation-play-state: paused; }
+          @media (prefers-reduced-motion: reduce) {
+            .nexoleolite-ticker-track { animation: none !important; }
+          }
+        `}</style>
+
+        {/* HERO BACKGROUND SLIDESHOW */}
         <div className="absolute inset-0 z-0">
           {heroBackgroundImages.map((image, index) => (
             <img
@@ -1299,37 +1384,62 @@ const LandingPage = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-brand-orange/40 via-black/40 to-black/60 dark:from-brand-orange/50 dark:via-black/60 dark:to-black/80" />
         </div>
 
+        {/* HERO SLIDESHOW INDICATORS */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
           {heroBackgroundImages.map((image, index) => (
             <span
               key={image}
               className={`h-1.5 rounded-full transition-all duration-500 ${
-                index === heroImageIndex
-                  ? 'w-6 bg-white'
-                  : 'w-1.5 bg-white/50'
+                index === heroImageIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
               }`}
             />
           ))}
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+          {/* WELCOME TICKER — TOP OF HERO, NO SEPARATE BACKGROUND */}
+          <div className="overflow-hidden py-3 sm:py-4 mb-6 sm:mb-8">
+            <div className="nexoleolite-ticker-track nexoleolite-ticker-left">
+              {[0, 1].map((copy) => (
+                <div
+                  key={copy}
+                  className="flex shrink-0 items-center gap-5 px-5 sm:gap-8 sm:px-8"
+                  aria-hidden={copy === 1 ? 'true' : undefined}
+                >
+                  <span className="text-lg sm:text-2xl font-extrabold tracking-tight text-white drop-shadow-lg">
+                    WELCOME TO <span className="text-brand-orange">NEXOLEOLITE</span> — WHERE BUYERS AND SELLERS CONNECT
+                  </span>
+                  <span className="text-brand-orange text-xl sm:text-2xl drop-shadow" aria-hidden="true">
+                    ✦
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* HERO MAIN CONTENT */}
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg">
-              Buy &amp; Sell Everything{' '}
-              <span className="text-brand-orange">Anywhere</span>
+            {/* BUY AND SELL HEADING — KEEP FIRST LINE TOGETHER */}
+            <h1 className="font-bold text-white mb-6 drop-shadow-lg leading-tight">
+              <span className="block whitespace-nowrap text-[clamp(1.45rem,5.5vw,4rem)]">
+                Buy &amp; Sell Everything
+              </span>
+              <span className="block text-brand-orange text-4xl sm:text-5xl md:text-6xl">
+                Anywhere
+              </span>
             </h1>
 
             <p className="text-lg md:text-xl text-gray-100 mb-10 drop-shadow">
               Discover products, connect with sellers, and shop on Nexoleolite.
             </p>
 
+            {/* SEARCH */}
             <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-2 flex flex-col md:flex-row gap-2">
               <div className="flex-1 flex items-center px-4">
                 <Search className="h-5 w-5 text-gray-400 shrink-0" />
-
                 <input
                   type="text"
-                  placeholder="What are you looking for?"
+                  placeholder={searchPlaceholder}
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   onKeyDown={handleKeyPress}
@@ -1339,7 +1449,6 @@ const LandingPage = () => {
 
               <div className="flex items-center px-4">
                 <MapPin className="h-5 w-5 text-gray-400 shrink-0" />
-
                 <select
                   value={selectedCategory}
                   onChange={(event) => setSelectedCategory(event.target.value)}
@@ -1363,6 +1472,7 @@ const LandingPage = () => {
               </button>
             </div>
 
+            {/* HERO BUTTONS */}
             <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
               <Link
                 to="/shop"
@@ -1380,6 +1490,58 @@ const LandingPage = () => {
                 Become a Seller
               </button>
             </div>
+
+            {/* HERO ACTION TICKER */}
+            <div className="mt-8 mx-auto max-w-4xl overflow-hidden rounded-xl border border-white/30 bg-black/25 backdrop-blur-sm py-3">
+              <div className="nexoleolite-ticker-track nexoleolite-ticker-left">
+                {[0, 1].map((copy) => (
+                  <div
+                    key={copy}
+                    className="flex shrink-0 items-center gap-4 px-5 sm:gap-7 sm:px-8"
+                    aria-hidden={copy === 1 ? 'true' : undefined}
+                  >
+                    {['LIST', 'BUY', 'SELL', 'DISCOVER', 'CONNECT', 'CHAT DIRECTLY', 'GROW'].map((item) => (
+                      <React.Fragment key={`${copy}-${item}`}>
+                        <span className="text-xs sm:text-sm font-extrabold tracking-[0.16em] text-white">
+                          {item}
+                        </span>
+                        <span className="text-brand-orange" aria-hidden="true">•</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FRAUD AWARENESS TICKER — BELOW HERO */}
+      <section className="relative overflow-hidden border-y border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-900">
+        <div className="overflow-hidden py-3 sm:py-4">
+          <div className="nexoleolite-ticker-track nexoleolite-ticker-right">
+            {[0, 1].map((copy) => (
+              <div
+                key={copy}
+                className="flex shrink-0 items-center gap-4 px-5 sm:gap-7 sm:px-8"
+                aria-hidden={copy === 1 ? 'true' : undefined}
+              >
+                {[
+                  '⚠ BEWARE OF FRAUD',
+                  'CHAT DIRECTLY WITH BUYERS AND SELLERS',
+                  'NEVER TRANSFER MONEY TO UNKNOWN ACCOUNTS',
+                  'PAY ONLY THROUGH OFFICIAL NEXOLEOLITE CHECKOUT',
+                  'NEVER SHARE OTP OR PASSWORD',
+                ].map((item) => (
+                  <React.Fragment key={`${copy}-${item}`}>
+                    <span className="text-xs sm:text-sm font-extrabold tracking-wide text-red-700 dark:text-red-300">
+                      {item}
+                    </span>
+                    <span className="text-red-400" aria-hidden="true">•</span>
+                  </React.Fragment>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1406,7 +1568,6 @@ const LandingPage = () => {
                 <div className="p-3 bg-brand-orange/10 rounded-full text-brand-orange">
                   {feature.icon}
                 </div>
-
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     {feature.title}
@@ -1417,6 +1578,37 @@ const LandingPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* MARKETPLACE SAFETY REMINDER — MID HOMEPAGE */}
+      <section className="py-10 sm:py-14 bg-gradient-to-br from-orange-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative overflow-hidden rounded-3xl border border-orange-200 dark:border-orange-900/60 bg-white dark:bg-gray-800 shadow-lg">
+            <div className="absolute inset-y-0 left-0 w-1.5 bg-brand-orange" />
+            <div className="flex flex-col md:flex-row md:items-center gap-5 p-6 sm:p-8">
+              <div className="shrink-0 rounded-2xl bg-orange-100 dark:bg-orange-900/30 p-4 text-brand-orange">
+                <Shield className="h-8 w-8" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-red-600 dark:text-red-400 mb-2">
+                  Stay alert • Shop safely
+                </p>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                  Your safety matters on Nexoleolite
+                </h2>
+                <p className="text-sm sm:text-base leading-relaxed text-gray-600 dark:text-gray-300">
+                  Buyers and sellers can chat directly to ask questions and discuss products. Be careful of fraud: never transfer money to unknown accounts, complete payments only through official Nexoleolite checkout, and never share your OTP or password.
+                </p>
+              </div>
+              <Link
+                to="/shop"
+                className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-orange px-5 py-3 font-semibold text-white hover:bg-orange-600 transition"
+              >
+                Shop Safely <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -1443,7 +1635,6 @@ const LandingPage = () => {
                     loading="lazy"
                   />
                 </div>
-
                 <p className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   {category.name}
                 </p>
@@ -1466,13 +1657,10 @@ const LandingPage = () => {
                   <Zap className="h-6 w-6 text-brand-orange" />
                   Promoted Products
                 </h2>
-
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   Products sellers are promoting on Nexoleolite.
                 </p>
               </div>
-
-              {/* FIX: Navigate to the Shop page in boosted-products mode */}
               <Link
                 to="/shop?boosted=true"
                 className="text-brand-orange flex items-center gap-1 hover:gap-2 transition shrink-0"
@@ -1488,7 +1676,6 @@ const LandingPage = () => {
                     <Zap className="h-3 w-3" />
                     Promoted
                   </span>
-
                   <ProductCard product={product} />
                 </div>
               ))}
@@ -1535,7 +1722,6 @@ const LandingPage = () => {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               Featured Products
             </h2>
-
             <Link
               to="/shop"
               className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"
@@ -1559,7 +1745,6 @@ const LandingPage = () => {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               New Arrivals
             </h2>
-
             <Link
               to="/shop?sort=newest"
               className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"
@@ -1584,7 +1769,6 @@ const LandingPage = () => {
               <TrendingUp className="h-6 w-6 text-brand-orange" />
               Trending Now
             </h2>
-
             <Link
               to="/shop?sort=popular"
               className="text-brand-orange flex items-center gap-1 hover:gap-2 transition"
@@ -1619,18 +1803,15 @@ const LandingPage = () => {
                     loading="lazy"
                   />
                 </div>
-
                 <h3 className="mt-3 font-semibold text-gray-900 dark:text-white">
                   {seller.name}
                 </h3>
-
                 <div className="flex items-center justify-center mt-1">
                   <Star className="h-4 w-4 text-yellow-400 fill-current" />
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">
                     {seller.rating}
                   </span>
                 </div>
-
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {seller.products}+ products
                 </p>
@@ -1646,12 +1827,9 @@ const LandingPage = () => {
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Ready to Start Selling?
           </h2>
-
           <p className="text-gray-600 dark:text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-            Join Nexoleolite, showcase your products, connect with buyers, and
-            grow your business.
+            Join Nexoleolite, showcase your products, connect with buyers, and grow your business.
           </p>
-
           <button
             type="button"
             onClick={handleSellerClick}
@@ -1666,4 +1844,3 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
-
